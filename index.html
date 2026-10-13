@@ -1,0 +1,114 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Imani Schools — Teacher Observation &amp; Coaching Portal</title>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root{--g:#0e4a43;--g2:#e3efec;--ink:#17201f;--line:#c9d6d3}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 "Segoe UI",Arial,sans-serif;color:var(--ink);background:#f3f6f5}
+header{background:var(--g);color:#fff;padding:14px 20px}header h1{margin:0;font:600 19px Georgia,serif}header p{margin:2px 0 0;opacity:.8;font-size:13px}
+nav{display:flex;gap:4px;padding:8px 20px 0;background:var(--g2);flex-wrap:wrap}
+nav button{border:0;background:none;padding:10px 14px;font:inherit;cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{border-color:var(--g);font-weight:600;color:var(--g)}
+main{max-width:1000px;margin:auto;padding:18px}section{display:none}section.on{display:block}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+label{font-size:13px;font-weight:600;display:block;margin-bottom:2px}
+input,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;font:inherit;background:#fff}
+textarea{min-height:220px}
+.b{background:var(--g);color:#fff;border:1px solid var(--g);padding:10px 16px;border-radius:4px;font:inherit;cursor:pointer}
+.b.alt{background:#fff;color:var(--g)}.b:disabled{opacity:.6}
+.banner{background:#fff7e0;border-left:4px solid #c89400;padding:8px 12px;margin:10px 0}
+.card{background:#fff;border:1px solid var(--line);border-radius:4px;padding:12px;margin:10px 0}
+details{background:#fff;border:1px solid var(--line);margin:8px 0}summary{padding:10px;cursor:pointer;font-weight:600}
+.gi{padding:8px 10px;border-top:1px solid var(--line)}.gi small{display:block;margin-bottom:4px}
+.chip{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:12px;padding:1px 9px;cursor:pointer;font-size:12px;margin:0 4px 4px 0}
+.sheet{background:#fff;padding:12px;overflow-x:auto}
+.sheet table{width:100%;border-collapse:collapse;table-layout:fixed;font:10.5pt Arial,sans-serif}
+.sheet td{border:1px solid #000;padding:5px 7px;vertical-align:top;white-space:pre-wrap;word-wrap:break-word}
+.sheet tr{page-break-inside:avoid}.sheet td.e{background:#fbfefd}.sheet td.e:focus{outline:2px solid var(--g)}
+.sheet h3{font:bold 12pt Arial;margin:14px 0 6px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+@media print{header,nav,.noprint{display:none!important}body{background:#fff}main{padding:0;max-width:none}.sheet{padding:0}.sheet td.e{background:none}@page{size:A4;margin:12mm}section{display:none!important}#preview{display:block!important}}
+</style></head><body>
+<header><h1>Imani Schools — Teacher Observation &amp; Coaching Portal</h1><p>Capture notes, check them, edit the sheet, export.</p></header>
+<nav id="nav"></nav>
+<main>
+<section id="intake" class="on">
+<div class="meta">
+<div><label>Teacher</label><input id="t" list="tl" onchange="newT()"><datalist id="tl"></datalist></div>
+<div><label>Date of observation</label><input id="d" type="date"></div>
+<div><label>Grade</label><input id="g"></div><div><label>Subject</label><input id="s"></div>
+<div><label>Topic</label><input id="tp"></div><div><label>Observer</label><input id="o"></div>
+<div><label>Obs No</label><input id="n" type="number" min="1" value="1" onchange="chk()"></div></div>
+<div id="ban"></div>
+<label style="margin-top:14px">Observation notes <button class="b alt" id="mic" onclick="mic()" style="padding:2px 10px;margin-left:8px">Dictate</button></label>
+<textarea id="notes" placeholder="Jot what you saw and heard, as it happened. Rough notes are fine."></textarea>
+<h3>Or tag notes to a criterion</h3><div id="guided"></div>
+<div class="bar"><button class="b" id="go" onclick="analyze()">Analyze &amp; synthesize</button></div>
+</section>
+<section id="audit"></section>
+<section id="preview">
+<div class="bar noprint"><button class="b" onclick="save()">Save to Google Sheets</button><button class="b alt" onclick="word()">Download Word (.docx)</button><button class="b alt" onclick="pdf()">Download PDF (.pdf)</button><button class="b alt" onclick="window.print()">Print</button></div>
+<p class="noprint"><small>Click any right-hand cell to edit it before saving or exporting.</small></p>
+<div class="sheet" id="sheet"></div></section>
+<section id="archive">
+<div class="meta"><div><label>Teacher</label><input id="at" oninput="arch()"></div><div><label>Grade</label><input id="ag" oninput="arch()"></div><div><label>Subject</label><input id="as" oninput="arch()"></div><div><label>Observer</label><input id="ao" oninput="arch()"></div></div>
+<div class="bar"><button class="b alt" onclick="reload()">Refresh archive</button><button class="b" onclick="pend()">Pull pending Google Form submissions</button></div>
+<div id="plist"></div><div id="alist"></div></section>
+</main>
+<script>
+const API="https://script.google.com/macros/s/AKfycbwZ5MSiow7g6A3MJVJpEYrEQ8ZahF-8c7k6t9p2kf1jdsSnzOSt3FR0D7e3uMoR_aFX/exec";
+/*SEC*/const SEC=[{"h":"Related to Standards 1 & 3- Execution of the Lesson Plan","i":["Every part of the lesson plan (opening, LEs and closure) is delivered in a manner aligned to the lesson's learning outcome, i.e., leads to the LO.","Students or teachers use various resources, technologies, tools, manipulatives, or other instructional materials to achieve the LO.","The lesson is differentiated in one or more ways to accommodate varying student learning profiles, readiness, or interests.","The examples, questions, stories, anecdotes, reading materials, and other resources used are engaging, age-appropriate, and relevant to students’ lives and interests, as well as the Islamic perspective and Fatemi Culture.","The teacher successfully implements all parts of the lesson (opening, experiences, closure) as written in the plan, i.e., the lesson is more or less aligned.","The teacher constantly checks the pulse of the classroom and is aware when students seem confused or need additional support.","The lesson is student-centred.\nSome indicators for this include:\nStudent voice > Teacher's voice\nOpportunities for students to construct their understanding\nEvery student has the opportunity to develop and use the SKILL mentioned in the LO\nThe teacher uses UDL strategies to engage students at both margins","The teacher communicates the LO of the lesson to students and ensures they understand it (can be any time during the period)","The teacher communicates, gives clear instructions and directions for all activities, and explains concepts in an accurate, engaging, and age-appropriate manner.","The teacher asks different questions, including higher-order thinking questions involving application, analysis, evaluation, and content synthesis.","Peer, independent or group work is well executed with a clearly stated purpose, time limit and output, making it highly engaging, productive, meaningful and eliciting higher-order thinking when needed."]},{"h":"Related to Standards 2 Inclusion, Classroom Environment and Culture","i":["Students follow routines and norms during transitions, class discussions, group work, and independent practice, which helps ensure the smooth execution of the lesson.","Students create or refer to relevant displays while teaching (subject-related displays, word walls, rules, vision, student work, etc.).","All students are highly participative and interact freely and openly with the teacher. Teacher-student and student-student interactions are appropriate and conflict-free, and students feel safe in the class.","The teacher handles student misbehaviour calmly, poised, consistently modelling a respectful tone and body language.","The teacher demonstrates a growth mindset and holds every student to high expectations."]},{"h":"Related to Standards 4 Pedagogical Content Knowledge","i":["The teacher uses a variety of literacy strategies appropriate for the subject and spends time building content-specific vocabulary.","The teacher proactively provides opportunities for students to clear doubts.\nThe teacher clearly and accurately responds to students' questions and doubts and can identify and address misconceptions.","The teacher explicitly connects the students' learning experiences with their enduring understanding of the topic or the standards."]},{"h":"Related to Standards 5 Assessment","i":["The teacher selects the most appropriate formative assessment method, Check for Understanding, to assess whether the LO has been achieved."]}];/*END*/
+const NOTE="Note specific evidence for points of Appreciation and Apprehension with Suggestions (It is not mandatory to cover every point in every observation.)";
+const T2=["List 3 highlights/ things that went well in the classroom; the teacher did well with relevant evidence.","What are the teacher’s top 2 areas of improvement that will also be the focus of the following observation?"];
+const FLAT=SEC.flatMap(s=>s.i),$=s=>document.querySelector(s),sp=n=>" ".repeat(n);
+const esc=x=>String(x??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+const get=async(a,p={})=>{const r=await(await fetch(API+"?"+new URLSearchParams({action:a,...p}))).json();if(r.error)throw new Error(r.error);return r};
+const post=async(a,b)=>{const r=await(await fetch(API,{method:"POST",body:JSON.stringify({action:a,...b})})).json();if(r.error)throw new Error(r.error);return r};
+const fail=e=>alert(e.message||e);
+let S={c:{},hl:"",imp:"",audit:[],clar:[]},HIST=[],PEND=[],rec;
+const M=()=>({t:$("#t").value.trim(),d:$("#d").value,g:$("#g").value,s:$("#s").value,tp:$("#tp").value,o:$("#o").value,n:$("#n").value});
+const setM=m=>{$("#t").value=m.t||"";$("#d").value=m.d||"";$("#g").value=m.g||"";$("#s").value=m.s||"";$("#tp").value=m.tp||"";$("#o").value=m.o||"";$("#n").value=m.n||1};
+const TABS=[["intake","New observation"],["audit","Audit"],["preview","Sheet"],["archive","Archive"]];
+$("#nav").innerHTML=TABS.map(([k,l])=>`<button onclick="show('${k}')">${l}</button>`).join("");
+function show(id){if(id=="preview"){sync();drawSheet()}TABS.forEach(([k],i)=>{$("#"+k).classList.toggle("on",k==id);$("#nav").children[i].classList.toggle("on",k==id)});if(id=="archive")arch()}
+$("#d").value=new Date().toISOString().slice(0,10);
+$("#guided").innerHTML=SEC.map(s=>`<details><summary>${esc(s.h)}</summary>${s.i.map(c=>`<div class="gi"><small>${esc(c.split("\n")[0])}</small><span class="chip" onclick="tag(this,' APPRECIATION')">+ Appreciation</span><span class="chip" onclick="tag(this,' APPREHENSION')">! Apprehension</span><input data-i="${FLAT.indexOf(c)}" placeholder="Evidence you saw"></div>`).join("")}</details>`).join("");
+function tag(c,t){const p=c.parentNode,i=p.querySelector("input");i.dataset.t=i.dataset.t==t?"":t;p.querySelectorAll(".chip").forEach(x=>x.style.background=x==c&&i.dataset.t?"#cfe8e2":"#fff")}
+function mic(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return alert("Dictation isn't supported in this browser.");if(rec){rec.stop();rec=null;$("#mic").textContent="Dictate";return}
+rec=new R();rec.continuous=true;rec.lang="en-IN";const t0=Date.now();rec.onresult=e=>{const x=e.results[e.results.length-1][0].transcript.trim(),s=Math.round((Date.now()-t0)/1e3),p=n=>String(n).padStart(2,"0");$("#notes").value+=`\n[${p(Math.floor(s/60))}:${p(s%60)}] ${x}`};rec.start();$("#mic").textContent="Stop"}
+function chk(){const t=M().t,n=+M().n,h=HIST.filter(r=>r.teacher==t).sort((a,b)=>a.obs-b.obs),a=[];S.prev=h.length?h[h.length-1]:null;
+if(h.some(r=>r.obs==n))a.push({type:"longitudinal",message:`Obs No ${n} already exists for ${t}.`});else if(S.prev&&n!=S.prev.obs+1)a.push({type:"longitudinal",message:`Obs No ${n} is out of sequence. The last saved observation for ${t} is Obs ${S.prev.obs}.`});
+$("#ban").innerHTML=S.prev?`<div class="banner"><b>Focus from Obs ${S.prev.obs}:</b> ${esc(S.prev.imp)}</div>`:"";return a}
+function newT(){const h=HIST.filter(r=>r.teacher==M().t);$("#n").value=Math.max(0,...h.map(r=>r.obs))+1;chk()}
+async function analyze(){const m=M(),g=[...document.querySelectorAll("[data-i]")].filter(e=>e.value.trim()).map(e=>`[Criterion ${+e.dataset.i+1}${e.dataset.t||""}] ${e.value.trim()}`).join("\n"),notes=($("#notes").value.trim()+"\n"+g).trim();
+if(!m.t||!notes)return alert("Enter the teacher's name and some observation notes.");
+const local=chk(),b=$("#go");b.disabled=true;b.textContent="Analyzing…";
+try{const r=await post("synthesize",{meta:m,notes,clar:S.clar,prev:S.prev&&{obs:S.prev.obs,focus:S.prev.imp},criteria:FLAT});
+S.c=r.criteria||{};S.hl=r.highlights||"";S.imp=r.improvements||"";S.notes=notes;S.audit=[...local,...(r.discrepancies||[])];S.clar=[];drawAudit();show(S.audit.length?"audit":"preview")}catch(e){fail(e)}
+b.disabled=false;b.textContent="Analyze & synthesize"}
+function drawAudit(){$("#audit").innerHTML="<h2>Audit</h2>"+(S.audit.length?S.audit.map(a=>`<div class="card"><b>${esc(a.type)}</b><br>${esc(a.message)}${a.original?`<br><small>Original: ${esc(a.original)}<br>Reframed: ${esc(a.reframed)}</small>`:""}${a.question?`<br><input data-q="${esc(a.question)}" placeholder="${esc(a.question)}">`:""}</div>`).join(""):"<p>No issues found.</p>")+`<div class="bar"><button class="b" onclick="redo()">Re-synthesize with my answers</button><button class="b alt" onclick="show('preview')">Proceed with current evidence</button></div>`}
+function redo(){S.clar=[...document.querySelectorAll("[data-q]")].filter(e=>e.value.trim()).map(e=>({question:e.dataset.q,answer:e.value.trim()}));analyze()}
+const heads=m=>[["Teacher’s Observation Sheet",1],["Name of the teacher: "+m.t],["Date of the observation: "+m.d],["Grade: "+m.g+sp(30)+"Subject:- "+m.s+sp(30)+"Topic:- "+m.tp],["Name of the observer: "+m.o+sp(70)+"Obs No: "+m.n]];
+function model(m){const r=heads(m).map(([f,b])=>({f,b}));SEC.forEach((s,si)=>{r.push({f:s.h,b:1});if(!si)r.push({a:"Observation Criteria",b:NOTE,bold:1});s.i.forEach(c=>{const k=FLAT.indexOf(c);r.push({a:c,k,b:S.c["c"+(k+1)]||""})})});return r}
+const model2=()=>[{a:T2[0],b:S.hl,k:"hl"},{a:T2[1],b:S.imp,k:"imp"}];
+const bd=(x,b)=>b?"<b>"+esc(x)+"</b>":esc(x);
+const tbl=r=>`<table>`+r.map(x=>x.f!=null?`<tr><td colspan="2">${bd(x.f,x.b)}</td></tr>`:`<tr><td>${bd(x.a,x.bold)}</td><td${x.k!=null?` class="e" contenteditable data-k="${x.k}"`:""}>${bd(x.b,x.bold)}</td></tr>`).join("")+"</table>";
+const drawSheet=()=>{$("#sheet").innerHTML=tbl(model(M())).replace("<table>",'<table><colgroup><col style="width:42%"><col style="width:58%"></colgroup>')+"<h3>Teacher Observation Summary</h3>"+tbl(model2()).replace("<table>",'<table><colgroup><col style="width:42%"><col style="width:58%"></colgroup>')};
+const sync=()=>document.querySelectorAll("#sheet [data-k]").forEach(td=>{const k=td.dataset.k,v=td.innerText.trim();if(k=="hl")S.hl=v;else if(k=="imp")S.imp=v;else S.c["c"+(+k+1)]=v});
+const fname=e=>`Observation_Summary_${M().t.replace(/\s+/g,"_")}_Obs${M().n}_${M().d}.${e}`;
+function word(){sync();const D=docx,B={style:D.BorderStyle.SINGLE,size:8,color:"000000"},bo={top:B,bottom:B,left:B,right:B},W=[4396,6070];
+const cell=(t,b,w,span)=>new D.TableCell({columnSpan:span,width:{size:w,type:D.WidthType.DXA},borders:bo,margins:{top:60,bottom:60,left:100,right:100},children:String(t||"").split("\n").map(l=>new D.Paragraph({children:[new D.TextRun({text:l,bold:!!b,font:"Arial",size:21})]}))});
+const T=r=>new D.Table({width:{size:10466,type:D.WidthType.DXA},columnWidths:W,rows:r.map(x=>new D.TableRow({cantSplit:true,children:x.f!=null?[cell(x.f,x.b,10466,2)]:[cell(x.a,x.bold,W[0]),cell(x.b,x.bold,W[1])]}))});
+const doc=new D.Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:720,bottom:720,left:720,right:720}}},children:[T(model(M())),new D.Paragraph({spacing:{before:240,after:120},children:[new D.TextRun({text:"Teacher Observation Summary",bold:true,font:"Arial",size:24})]}),T(model2())]}]});
+D.Packer.toBlob(doc).then(b=>saveAs(b,fname("docx")))}
+function pdf(){sync();html2pdf().set({margin:8,filename:fname("pdf"),html2canvas:{scale:2},jsPDF:{unit:"mm",format:"a4"},pagebreak:{mode:["css"],avoid:"tr"}}).from($("#sheet")).save()}
+async function save(){sync();const m=M();try{const r=await post("save",{record:{id:S.id,teacher:m.t,date:m.d,grade:m.g,subject:m.s,topic:m.tp,observer:m.o,obs:m.n,notes:S.notes||$("#notes").value,c:S.c,hl:S.hl,imp:S.imp,log:S.audit,formRow:S.formRow}});S.id=r.id;await reload();alert("Saved to Google Sheets.")}catch(e){fail(e)}}
+async function reload(){try{HIST=(await get("history")).records;$("#tl").innerHTML=[...new Set(HIST.map(r=>r.teacher))].map(t=>`<option value="${esc(t)}">`).join("");arch()}catch(e){if(!API.startsWith("PASTE"))fail(e)}}
+function arch(){const f=["at","ag","as","ao"].map(i=>$("#"+i).value.toLowerCase()),L=HIST.filter(r=>[r.teacher,r.grade,r.subject,r.observer].every((v,i)=>String(v).toLowerCase().includes(f[i])));
+$("#alist").innerHTML=L.map(r=>`<div class="card"><b>${esc(r.teacher)}</b>, Obs ${esc(r.obs)}, ${esc(r.date)}<br><small>Grade ${esc(r.grade)}, ${esc(r.subject)}, ${esc(r.topic)}, observer ${esc(r.observer)}</small><br><button class="b alt" onclick="openRec('${r.id}')">Open</button></div>`).join("")||"<p>No saved observations match.</p>"}
+function openRec(id){const r=HIST.find(x=>x.id==id);setM({t:r.teacher,d:r.date,g:r.grade,s:r.subject,tp:r.topic,o:r.observer,n:r.obs});S={c:r.c||{},hl:r.hl,imp:r.imp,audit:[],clar:[],id:r.id,notes:r.notes};show("preview")}
+async function pend(){try{PEND=(await get("pending")).pending}catch(e){return fail(e)}
+$("#plist").innerHTML=PEND.map((p,i)=>`<div class="card"><b>${esc(p.teacher)}</b>, ${esc(p.date)}, ${esc(p.observer)}<br><small>${esc(String(p.notes).slice(0,140))}</small><br><button class="b alt" onclick="useP(${i})">Synthesize and open</button></div>`).join("")||"<p>No pending submissions.</p>"}
+function useP(i){const p=PEND[i];setM({t:p.teacher,d:p.date,g:p.grade,s:p.subject,tp:p.topic,o:p.observer,n:p.obs});$("#notes").value=p.notes;S.formRow=p.row;show("intake");analyze()}
+show("intake");reload();
+</script></body></html>
