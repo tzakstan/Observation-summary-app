@@ -1,11 +1,11 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Imani Schools — Teacher Observation &amp; Coaching Portal</title>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0e4a43"><link rel="manifest" href="manifest.json"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-180.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Observations"><title>Imani Schools — Teacher Observation &amp; Coaching Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{--g:#0e4a43;--g2:#e3efec;--ink:#17201f;--line:#c9d6d3}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 "Segoe UI",Arial,sans-serif;color:var(--ink);background:#f3f6f5}
-header{background:var(--g);color:#fff;padding:14px 20px}header h1{margin:0;font:600 19px Georgia,serif}header p{margin:2px 0 0;opacity:.8;font-size:13px}
+header{background:var(--g);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 20px 14px}input,textarea{font-size:16px}.b{min-height:44px}header h1{margin:0;font:600 19px Georgia,serif}header p{margin:2px 0 0;opacity:.8;font-size:13px}
 nav{display:flex;gap:4px;padding:8px 20px 0;background:var(--g2);flex-wrap:wrap}
 nav button{border:0;background:none;padding:10px 14px;font:inherit;cursor:pointer;border-bottom:3px solid transparent}
 nav button.on{border-color:var(--g);font-weight:600;color:var(--g)}
@@ -27,6 +27,14 @@ details{background:#fff;border:1px solid var(--line);margin:8px 0}summary{paddin
 .sheet tr{page-break-inside:avoid}.sheet td.e{background:#fbfefd}.sheet td.e:focus{outline:2px solid var(--g)}
 .sheet h3{font:bold 12pt Arial;margin:14px 0 6px}
 .bar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+@media(max-width:700px){
+header h1{font-size:16px}header p{display:none}
+nav{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:0 0 env(safe-area-inset-bottom);gap:0;flex-wrap:nowrap;border-top:1px solid var(--line)}
+nav button{flex:1;padding:12px 2px;font-size:13px;border-bottom:0;border-top:3px solid transparent}nav button.on{border-top-color:var(--g)}
+main{padding:14px 12px calc(80px + env(safe-area-inset-bottom))}
+.meta{grid-template-columns:1fr 1fr}.bar .b{flex:1 1 45%}#go{width:100%}
+textarea{min-height:240px}.gi input{margin-top:4px}.chip{padding:6px 12px;font-size:13px}
+.sheet{padding:6px;-webkit-overflow-scrolling:touch}.sheet table{min-width:620px}.sheet.pdfmode table{min-width:0}}
 @media print{header,nav,.noprint{display:none!important}body{background:#fff}main{padding:0;max-width:none}.sheet{padding:0}.sheet td.e{background:none}@page{size:A4;margin:12mm}section{display:none!important}#preview{display:block!important}}
 </style></head><body>
 <header><h1>Imani Schools — Teacher Observation &amp; Coaching Portal</h1><p>Capture notes, check them, edit the sheet, export.</p></header>
@@ -101,7 +109,7 @@ const cell=(t,b,w,span)=>new D.TableCell({columnSpan:span,width:{size:w,type:D.W
 const T=r=>new D.Table({width:{size:10466,type:D.WidthType.DXA},columnWidths:W,rows:r.map(x=>new D.TableRow({cantSplit:true,children:x.f!=null?[cell(x.f,x.b,10466,2)]:[cell(x.a,x.bold,W[0]),cell(x.b,x.bold,W[1])]}))});
 const doc=new D.Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:720,bottom:720,left:720,right:720}}},children:[T(model(M())),new D.Paragraph({spacing:{before:240,after:120},children:[new D.TextRun({text:"Teacher Observation Summary",bold:true,font:"Arial",size:24})]}),T(model2())]}]});
 D.Packer.toBlob(doc).then(b=>saveAs(b,fname("docx")))}
-function pdf(){sync();html2pdf().set({margin:8,filename:fname("pdf"),html2canvas:{scale:2},jsPDF:{unit:"mm",format:"a4"},pagebreak:{mode:["css"],avoid:"tr"}}).from($("#sheet")).save()}
+function pdf(){sync();$("#sheet").classList.add("pdfmode");html2pdf().set({margin:8,filename:fname("pdf"),html2canvas:{scale:2},jsPDF:{unit:"mm",format:"a4"},pagebreak:{mode:["css"],avoid:"tr"}}).from($("#sheet")).save().then(()=>$("#sheet").classList.remove("pdfmode"),()=>$("#sheet").classList.remove("pdfmode"))}
 async function save(){sync();const m=M();try{const r=await post("save",{record:{id:S.id,teacher:m.t,date:m.d,grade:m.g,subject:m.s,topic:m.tp,observer:m.o,obs:m.n,notes:S.notes||$("#notes").value,c:S.c,hl:S.hl,imp:S.imp,log:S.audit,formRow:S.formRow}});S.id=r.id;await reload();alert("Saved to Google Sheets.")}catch(e){fail(e)}}
 async function reload(){try{HIST=(await get("history")).records;$("#tl").innerHTML=[...new Set(HIST.map(r=>r.teacher))].map(t=>`<option value="${esc(t)}">`).join("");arch()}catch(e){if(!API.startsWith("PASTE"))fail(e)}}
 function arch(){const f=["at","ag","as","ao"].map(i=>$("#"+i).value.toLowerCase()),L=HIST.filter(r=>[r.teacher,r.grade,r.subject,r.observer].every((v,i)=>String(v).toLowerCase().includes(f[i])));
@@ -110,5 +118,6 @@ function openRec(id){const r=HIST.find(x=>x.id==id);setM({t:r.teacher,d:r.date,g
 async function pend(){try{PEND=(await get("pending")).pending}catch(e){return fail(e)}
 $("#plist").innerHTML=PEND.map((p,i)=>`<div class="card"><b>${esc(p.teacher)}</b>, ${esc(p.date)}, ${esc(p.observer)}<br><small>${esc(String(p.notes).slice(0,140))}</small><br><button class="b alt" onclick="useP(${i})">Synthesize and open</button></div>`).join("")||"<p>No pending submissions.</p>"}
 function useP(i){const p=PEND[i];setM({t:p.teacher,d:p.date,g:p.grade,s:p.subject,tp:p.topic,o:p.observer,n:p.obs});$("#notes").value=p.notes;S.formRow=p.row;show("intake");analyze()}
+if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 show("intake");reload();
 </script></body></html>
