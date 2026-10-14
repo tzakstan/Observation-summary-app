@@ -6,6 +6,26 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+@font-face{
+  font-family:'Kanz-al-Lulu';
+  src:url('KanzalLulu-Regular.ttf') format('truetype'),
+      local('Kanz-al-Lulu'),
+      local('KanzalLulu'),
+      local('Kanz al Lulu');
+  font-weight:normal;
+  font-style:normal;
+  font-display:swap;
+}
+@font-face{
+  font-family:'Kanz-Arabic-Auto';
+  src:url('KanzalLulu-Regular.ttf') format('truetype'),
+      local('Kanz-al-Lulu'),
+      local('KanzalLulu'),
+      local('Kanz al Lulu');
+  unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF;
+}
+bdi,.ar,[dir="rtl"]{font-family:'Kanz-al-Lulu','Kanz-Arabic-Auto','Amiri',serif;font-size:1.15em}
+
 :root{--g:#0e4a43;--g2:#e3efec;--ink:#17201f;--line:#c9d6d3}
 *{box-sizing:border-box}body{margin:0;font:15px/1.5 "Segoe UI",Arial,sans-serif;color:var(--ink);background:#f3f6f5}
 header{background:var(--g);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 20px 14px}input,textarea{font-size:16px}.b{min-height:44px}header h1{margin:0;font:600 19px Georgia,serif}header p{margin:2px 0 0;opacity:.8;font-size:13px}
@@ -15,7 +35,7 @@ nav button.on{border-color:var(--g);font-weight:600;color:var(--g)}
 main{max-width:1000px;margin:auto;padding:18px}section{display:none}section.on{display:block}
 .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
 label{font-size:13px;font-weight:600;display:block;margin-bottom:2px}
-input,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;font:inherit;background:#fff}
+input,textarea{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;font-family:"Kanz-Arabic-Auto",Arial,"Kanz-al-Lulu","Segoe UI",sans-serif;font-size:16px;background:#fff}
 textarea{min-height:220px}
 .b{background:var(--g);color:#fff;border:1px solid var(--g);padding:10px 16px;border-radius:4px;font:inherit;cursor:pointer}
 .b.alt{background:#fff;color:var(--g)}.b:disabled{opacity:.6}
@@ -25,7 +45,7 @@ details{background:#fff;border:1px solid var(--line);margin:8px 0}summary{paddin
 .gi{padding:8px 10px;border-top:1px solid var(--line)}.gi small{display:block;margin-bottom:4px}
 .chip{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:12px;padding:1px 9px;cursor:pointer;font-size:12px;margin:0 4px 4px 0}
 .sheet{background:#fff;padding:12px;overflow-x:auto}
-.sheet table{width:100%;border-collapse:collapse;table-layout:fixed;font:10.5pt Arial,"Amiri","Noto Naskh Arabic","Traditional Arabic","Segoe UI",sans-serif}
+.sheet table{width:100%;border-collapse:collapse;table-layout:fixed;font:10.5pt "Kanz-Arabic-Auto",Arial,"Kanz-al-Lulu","Amiri","Noto Naskh Arabic","Traditional Arabic","Segoe UI",sans-serif}
 .sheet td,bdi,[dir="auto"]{unicode-bidi:isolate}
 .sheet td{border:1px solid #000;padding:5px 7px;vertical-align:top;white-space:pre-wrap;word-wrap:break-word}
 .sheet tr{page-break-inside:avoid}.sheet td.e{background:#fbfefd}.sheet td.e:focus{outline:2px solid var(--g)}
@@ -116,7 +136,7 @@ const heads=(m,forDoc)=>[
 ["Teacher’s Observation Sheet",1],
 ["Name of the teacher: "+m.t],
 ["Date of the observation: "+m.d],
-forDoc?["Grade: "+m.g+sp(15)+"Subject:- "+m.s+sp(15)+"Topic:- "+m.tp]:[`<div style="display:flex;justify-content:space-between"><span>Grade: ${esc(m.g)}</span><span>Subject:- ${esc(m.s)}</span><span>Topic:- <bdi dir="auto" style="font-family:'Amiri','Noto Naskh Arabic',sans-serif">${esc(m.tp)}</bdi></span></div>`,0,true],
+forDoc?["Grade: "+m.g+sp(15)+"Subject:- "+m.s+sp(15)+"Topic:- "+m.tp]:[`<div style="display:flex;justify-content:space-between"><span>Grade: ${esc(m.g)}</span><span>Subject:- ${esc(m.s)}</span><span>Topic:- <bdi dir="auto" style="font-family:'Kanz-al-Lulu','Kanz-Arabic-Auto','Amiri',sans-serif;font-size:1.18em">${esc(m.tp)}</bdi></span></div>`,0,true],
 forDoc?["Name of the observer: "+m.o+sp(40)+"Obs No: "+m.n]:[`<div style="display:flex;justify-content:space-between"><span>Name of the observer: ${esc(m.o)}</span><span>Obs No: ${esc(m.n)}</span></div>`,0,true]
 ];
 function model(m,forDoc){const r=heads(m,forDoc).map(([f,b,raw])=>({f,b,raw}));SEC.forEach((s,si)=>{r.push({f:s.h,b:1});if(!si)r.push({a:"Observation Criteria",b:NOTE,bold:1});s.i.forEach(c=>{const k=FLAT.indexOf(c);r.push({a:c,k,b:S.c["c"+(k+1)]||""})})});return r}
@@ -127,7 +147,7 @@ const drawSheet=()=>{$("#sheet").innerHTML=tbl(model(M())).replace("<table>",'<t
 const sync=()=>document.querySelectorAll("#sheet [data-k]").forEach(td=>{const k=td.dataset.k,v=td.innerText.trim();if(k=="hl")S.hl=v;else if(k=="imp")S.imp=v;else S.c["c"+(+k+1)]=v});
 const fname=e=>`Observation_Summary_${M().t.replace(/\s+/g,"_")}_Obs${M().n}_${M().d}.${e}`;
 function word(){sync();const D=docx,B={style:D.BorderStyle.SINGLE,size:8,color:"000000"},bo={top:B,bottom:B,left:B,right:B},W=[4396,6070];
-const cell=(t,b,w,span)=>new D.TableCell({columnSpan:span,width:{size:w,type:D.WidthType.DXA},borders:bo,margins:{top:60,bottom:60,left:100,right:100},children:String(t||"").split("\n").map(l=>new D.Paragraph({children:[new D.TextRun({text:l,bold:!!b,font:"Arial",size:21})]}))});
+const cell=(t,b,w,span)=>new D.TableCell({columnSpan:span,width:{size:w,type:D.WidthType.DXA},borders:bo,margins:{top:60,bottom:60,left:100,right:100},children:String(t||"").split("\n").map(l=>new D.Paragraph({children:[new D.TextRun({text:l,bold:!!b,font:{name:"Arial",cs:"Kanz-al-Lulu"},size:21})]}))});
 const T=r=>new D.Table({width:{size:10466,type:D.WidthType.DXA},columnWidths:W,rows:r.map(x=>new D.TableRow({cantSplit:true,children:x.f!=null?[cell(x.f,x.b,10466,2)]:[cell(x.a,x.bold,W[0]),cell(x.b,x.bold,W[1])]}))});
 const doc=new D.Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:720,bottom:720,left:720,right:720}}},children:[T(model(M(),true)),new D.Paragraph({spacing:{before:240,after:120},children:[new D.TextRun({text:"Teacher Observation Summary",bold:true,font:"Arial",size:24})]}),T(model2())]}]});
 D.Packer.toBlob(doc).then(b=>saveAs(b,fname("docx")))}
