@@ -1,4 +1,4 @@
-const C = "obs-portal-v5";
+const C = "obs-portal-v6";
 const APP_SHELL = [
   "./",
   "index.html",

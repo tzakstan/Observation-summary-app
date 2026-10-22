@@ -100,6 +100,31 @@ section{display:none!important}
 .timeline-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--g2);color:var(--g)}
 .continuity-alert{background:#e3efec;border-left:3px solid var(--g);padding:6px 10px;font-size:12px;border-radius:3px;margin:8px 0}
 #d3-tooltip{position:fixed;display:none;background:rgba(23,32,31,0.95);color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;pointer-events:none;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.18);max-width:280px;line-height:1.4}
+.scorecard-banner{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:10px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.scorecard-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.scorecard-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:16px;font-weight:700;font-size:13px}
+.scorecard-badge.high{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+.scorecard-badge.med{background:#e0f2f1;color:#00796b;border:1px solid #b2dfdb}
+.scorecard-badge.low{background:#fff3e0;color:#d97706;border:1px solid #ffe0b2}
+.scorecard-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.metric-item{background:#fbfdfc;border:1px solid #e3efec;border-radius:6px;padding:8px 10px;font-size:12px}
+.metric-item-name{color:#555;font-size:10.5px;text-transform:uppercase;font-weight:700;margin-bottom:2px}
+.metric-bar-bg{width:100%;height:6px;background:#e3efec;border-radius:3px;overflow:hidden;margin-top:4px}
+.metric-bar-fill{height:100%;border-radius:3px;transition:width 0.4s ease}
+.audit-card{background:#fff;border:1px solid var(--line);border-left:4px solid var(--g);border-radius:6px;padding:14px;margin:12px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.audit-card.tone{border-left-color:#00897b}
+.audit-card.gap{border-left-color:#d97706}
+.audit-card.continuity{border-left-color:#2e7d32}
+.audit-card.contradiction{border-left-color:#c62828}
+.audit-card-title{font-weight:700;font-size:13.5px;color:var(--ink);display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.reframe-compare{background:#f8faf9;border:1px solid #e0eae8;border-radius:4px;padding:10px;margin:8px 0;font-size:13px}
+.reframe-orig{color:#888;text-decoration:line-through;margin-bottom:4px}
+.reframe-suggest{color:#0e4a43;font-weight:600}
+.chip-group{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.option-chip{background:#fff;border:1px solid var(--line);border-radius:14px;padding:4px 11px;font-size:12px;cursor:pointer;transition:all 0.15s ease;color:var(--ink)}
+.option-chip:hover{border-color:var(--g);background:#f0f7f5}
+.option-chip.recommended{border-color:#0e4a43;font-weight:600;background:#eef7f5}
+.option-chip.selected{background:var(--g);color:#fff;border-color:var(--g)}
 </style></head><body>
 <header>
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -131,9 +156,22 @@ section{display:none!important}
 <h3>Or tag notes to a criterion</h3><div id="guided"></div>
 <div class="bar"><button class="b" id="go" onclick="analyze()">Analyze &amp; synthesize</button></div>
 </section>
-<section id="audit"></section>
+<section id="audit">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+  <div>
+    <h2 style="margin:0;color:var(--g);font-size:20px;">Coaching Intelligence &amp; Quality Audit</h2>
+    <p style="margin:2px 0 0;font-size:13px;color:#555;">Calibrate evidence grounding, diplomatic reframing, and actionability before finalizing.</p>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <button class="b alt" onclick="show('intake')" style="padding:6px 14px;font-size:13px;">✏️ Back to Notes</button>
+    <button class="b alt" onclick="proceedToPreviewDirectly()" style="padding:6px 14px;font-size:13px;">⏩ Skip to Sheet</button>
+  </div>
+</div>
+<div id="auditContent"></div>
+</section>
 <section id="preview">
 <div class="bar noprint"><button class="b" onclick="save()">Save to Google Sheets</button><button class="b alt" onclick="word()">Download Word (.docx)</button><button class="b alt" onclick="pdf()">Download PDF (.pdf)</button><button class="b alt" onclick="window.print()">Print</button></div>
+<div id="coachingScorecard" class="noprint" style="margin:10px 0;"></div>
 <p class="noprint"><small>Click any right-hand cell to edit it before saving or exporting.</small></p>
 <div class="sheet" id="sheet"></div></section>
 <section id="analytics">
@@ -265,14 +303,356 @@ function chk(){const t=M().t,n=+M().n,h=HIST.filter(r=>r.teacher==t).sort((a,b)=
 if(h.some(r=>r.obs==n))a.push({type:"longitudinal",message:`Obs No ${n} already exists for ${t}.`});else if(S.prev&&n!=S.prev.obs+1)a.push({type:"longitudinal",message:`Obs No ${n} is out of sequence. The last saved observation for ${t} is Obs ${S.prev.obs}.`});
 $("#ban").innerHTML=S.prev?`<div class="banner"><b>Focus from Obs ${S.prev.obs}:</b> ${esc(S.prev.imp)}</div>`:"";return a}
 function newT(){const h=HIST.filter(r=>r.teacher==M().t);$("#n").value=Math.max(0,...h.map(r=>r.obs))+1;chk()}
-async function analyze(){const m=M(),g=[...document.querySelectorAll("[data-i]")].filter(e=>e.value.trim()).map(e=>`[Criterion ${+e.dataset.i+1}${e.dataset.t||""}] ${e.value.trim()}`).join("\n"),notes=($("#notes").value.trim()+"\n"+g).trim();
-if(!m.t||!notes)return alert("Enter the teacher's name and some observation notes.");
-const local=chk(),b=$("#go");b.disabled=true;b.textContent="Analyzing…";
-try{const r=await post("synthesize",{meta:m,notes,clar:S.clar,prev:S.prev&&{obs:S.prev.obs,focus:S.prev.imp},criteria:FLAT});
-S.c=r.criteria||{};S.hl=r.highlights||"";S.imp=r.improvements||"";S.notes=notes;S.audit=[...local,...(r.discrepancies||[])];S.clar=[];drawAudit();show(S.audit.length?"audit":"preview")}catch(e){fail(e)}
-b.disabled=false;b.textContent="Analyze & synthesize"}
-function drawAudit(){$("#audit").innerHTML="<h2>Audit</h2>"+(S.audit.length?S.audit.map(a=>`<div class="card"><b>${esc(a.type)}</b><br>${esc(a.message)}${a.original?`<br><small>Original: ${esc(a.original)}<br>Reframed: ${esc(a.reframed)}</small>`:""}${a.question?`<br><input data-q="${esc(a.question)}" placeholder="${esc(a.question)}">`:""}</div>`).join(""):"<p>No issues found.</p>")+`<div class="bar"><button class="b" onclick="redo()">Re-synthesize with my answers</button><button class="b alt" onclick="show('preview')">Proceed with current evidence</button></div>`}
-function redo(){S.clar=[...document.querySelectorAll("[data-q]")].filter(e=>e.value.trim()).map(e=>({question:e.dataset.q,answer:e.value.trim()}));analyze()}
+async function analyze(bypassElicitation = false){
+  const m = M();
+  const g = [...document.querySelectorAll("[data-i]")].filter(e => e.value.trim()).map(e => `[Criterion ${+e.dataset.i+1}${e.dataset.t||""}] ${e.value.trim()}`).join("\n");
+  const notes = ($("#notes").value.trim() + "\n" + g).trim();
+  if (!m.t || !notes) return alert("Enter the teacher's name and some observation notes.");
+  const local = chk();
+
+  // Run pre-flight coaching elicitation if not bypassed and no clarifications pending
+  if (!bypassElicitation && (!S.clar || !S.clar.length)) {
+    const preFlight = runPreFlightElicitation(notes, m, S.prev);
+    if (preFlight.length > 0) {
+      S.audit = [...local, ...preFlight];
+      drawAudit(true);
+      show("audit");
+      return;
+    }
+  }
+
+  const b = $("#go");
+  b.disabled = true;
+  b.textContent = "Analyzing & synthesizing…";
+
+  try {
+    const r = await post("synthesize", {
+      meta: m,
+      notes: notes,
+      clar: S.clar,
+      prev: S.prev && { obs: S.prev.obs, focus: S.prev.imp },
+      criteria: FLAT
+    });
+    S.c = r.criteria || {};
+    S.hl = r.highlights || "";
+    S.imp = r.improvements || "";
+    S.notes = notes;
+    S.audit = [...local, ...(r.discrepancies || [])];
+    S.clar = [];
+    S.scorecard = evaluateCoachingQuality(S.c, S.hl, S.imp, notes);
+
+    if (S.audit.length > 0) {
+      drawAudit(false);
+      show("audit");
+    } else {
+      drawCoachingScorecardInPreview();
+      show("preview");
+    }
+  } catch(e) {
+    fail(e);
+  }
+  b.disabled = false;
+  b.textContent = "Analyze & synthesize";
+}
+
+function evaluateCoachingQuality(c, hl, imp, notes) {
+  const values = Object.values(c || {}).filter(v => typeof v === 'string' && v.trim());
+  const allText = (values.join(" ") + " " + (hl || "") + " " + (imp || "") + " " + (notes || "")).toLowerCase();
+  const totalComments = Math.max(1, values.length);
+
+  const evidenceKeywords = ['such as', 'specifically', 'for example', 'demonstrated by', 'quoted', 'minutes', 'pair', 'exit ticket', 'worksheet', 'board', 'riwayat', 'bayaan', 'stick', 'question', 'textbook', 'activity', 'observed'];
+  const groundedCount = values.filter(v => {
+    const lv = v.toLowerCase();
+    return evidenceKeywords.some(k => lv.includes(k));
+  }).length;
+  const evidenceScore = Math.min(100, Math.max(45, Math.round((groundedCount / totalComments) * 100)));
+
+  const actionVerbs = ['prioritize', 'embed', 'implement', 'structure', 'introduce', 'utilize', 'pre-teach', 'organize', 'incorporate', 'scaffold', 'differentiate', 'pause', 'establish', 'model'];
+  const actionableCount = values.filter(v => {
+    const lv = v.toLowerCase();
+    return actionVerbs.some(k => lv.includes(k));
+  }).length;
+  const actionScore = Math.min(100, Math.max(40, Math.round((actionableCount / totalComments) * 100)));
+
+  const deficitWords = ['failed', 'boring', 'poor', 'lazy', 'terrible', 'waste', 'bad', 'disaster'];
+  const deficitFound = deficitWords.filter(w => allText.includes(w));
+  const toneScore = deficitFound.length === 0 ? 96 : Math.max(50, 96 - (deficitFound.length * 15));
+
+  const ethosTerms = ['fatemi', 'wasila', 'riwayat', 'bayaan', 'syedna', 'burhanuddin', 'mufaddal', 'islamic', 'culture', 'akhlaq', 'adab', 'respect', 'calm', 'poised', 'values', 'forgiveness'];
+  const ethosCount = ethosTerms.filter(t => allText.includes(t)).length;
+  const ethosScore = Math.min(100, Math.max(65, 70 + (ethosCount * 8)));
+
+  let rubricScore = 100;
+  if (values.length < 2) rubricScore = 65;
+  else if (values.length > 18) rubricScore = 80;
+
+  const overall = Math.round(
+    (evidenceScore * 0.25) +
+    (actionScore * 0.25) +
+    (toneScore * 0.20) +
+    (ethosScore * 0.15) +
+    (rubricScore * 0.15)
+  );
+
+  let coachingLevel = "High-Leverage Coaching";
+  let badgeClass = "high";
+  if (overall < 65) {
+    coachingLevel = "Developing Feedback";
+    badgeClass = "low";
+  } else if (overall < 80) {
+    coachingLevel = "Proficient Coaching";
+    badgeClass = "med";
+  }
+
+  let tip = "Outstanding synthesis! Evidence is grounded, diplomatic, and actionable.";
+  if (evidenceScore < 70) tip = "💡 Coaching Tip: Anchor more criteria comments in specific student quotes, actions, or work samples.";
+  else if (actionScore < 70) tip = "💡 Coaching Tip: Upgrade suggestions to specific instructional protocols (e.g., Turn-and-Talk, Exit Ticket).";
+  else if (ethosScore < 75) tip = "💡 Coaching Tip: Consider connecting classroom practices with Fatemi cultural anchors or Islamic values where relevant.";
+
+  return { overall, coachingLevel, badgeClass, evidenceScore, actionScore, toneScore, ethosScore, rubricScore, tip };
+}
+
+function runPreFlightElicitation(notes, meta, prev) {
+  const discrepancies = [];
+
+  const bluntChecks = [
+    {
+      regex: /\b(poor|bad)\s+classroom\s+management\b/i,
+      message: "Blunt evaluative note detected. In instructional coaching, frame management around transitions and routines.",
+      original: "poor classroom management",
+      reframed: "Establish explicit transitional routines and non-verbal cues to streamline student movement between activities.",
+      question: "Which specific lesson phase needed clearer routines?",
+      options: [
+        "(Recommended) Transitions between activities",
+        "Initial settling during lesson opening",
+        "Managing materials during group work",
+        "Maintaining attention during teacher exposition"
+      ]
+    },
+    {
+      regex: /\b(boring|monotonous|waste of time)\b/i,
+      message: "Deficit language detected. In coaching, focus on student-centred strategies and pacing variation.",
+      original: "boring",
+      reframed: "Introduce student-centred protocols (e.g., think-pair-share, turn-and-talk) and varied sensory stimuli to elevate engagement.",
+      question: "What instructional shift would best boost engagement here?",
+      options: [
+        "(Recommended) Turn-and-talk student discussions",
+        "Hands-on manipulatives / visual aids",
+        "Higher-order inquiry questions",
+        "Pacing acceleration with timed tasks"
+      ]
+    },
+    {
+      regex: /\b(students? (didn't|did not) (understand|get it)|confused)\b/i,
+      message: "Evidence gap: noted student confusion, but didn't pinpoint the step where understanding broke down.",
+      original: "students confused",
+      reframed: "Check for understanding at key conceptual junctions to surface and resolve emerging misconceptions proactively.",
+      question: "Where did students encounter the obstacle?",
+      options: [
+        "(Recommended) Applying new concept in independent practice",
+        "Abstract vocabulary decoding",
+        "Multi-step directions without visual exemplars",
+        "Lack of scaffolded model examples"
+      ]
+    }
+  ];
+
+  bluntChecks.forEach(chk => {
+    if (chk.regex.test(notes) && discrepancies.length < 3) {
+      discrepancies.push({
+        type: "Coaching Reframing & Evidence Gap",
+        message: chk.message,
+        original: chk.original,
+        reframed: chk.reframed,
+        question: chk.question,
+        options: chk.options
+      });
+    }
+  });
+
+  if (prev && prev.imp && discrepancies.length < 3) {
+    const prevKeywords = prev.imp.toLowerCase().split(/\W+/).filter(w => w.length > 4);
+    const mentionsPrev = prevKeywords.some(w => notes.toLowerCase().includes(w));
+    if (!mentionsPrev) {
+      discrepancies.push({
+        type: "Longitudinal Continuity Check",
+        message: `Obs #${prev.obs} prioritized: "${prev.imp.split('\n')[0]}". Did you observe evidence or progress on this target today?`,
+        question: `Status of Obs #${prev.obs} focus target:`,
+        options: [
+          "(Recommended) Evidenced clear progress in today's lesson",
+          "Partial implementation observed with further coaching needed",
+          "Target was not observed in today's specific period",
+          "Addressed alternative focus during this observation"
+        ]
+      });
+    }
+  }
+
+  return discrepancies;
+}
+
+function drawCoachingScorecardInPreview() {
+  const container = document.getElementById('coachingScorecard');
+  if (!container) return;
+  const sc = evaluateCoachingQuality(S.c, S.hl, S.imp, S.notes);
+  container.innerHTML = `
+    <div class="scorecard-banner">
+      <div class="scorecard-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">🎓</span>
+          <div>
+            <b>Coaching Quality Score:</b>
+            <span class="scorecard-badge ${sc.badgeClass}" style="margin-left:6px;">${sc.overall} / 100 &bull; ${sc.coachingLevel}</span>
+          </div>
+        </div>
+        <small style="color:#666;">Evaluated via 5 coaching quality dimensions</small>
+      </div>
+      <div class="scorecard-metrics">
+        <div class="metric-item">
+          <div class="metric-item-name">Evidence Grounding</div>
+          <b>${sc.evidenceScore}%</b>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${sc.evidenceScore}%;background:#2e7d32;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-item-name">Actionability</div>
+          <b>${sc.actionScore}%</b>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${sc.actionScore}%;background:#0e4a43;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-item-name">Growth Mindset Tone</div>
+          <b>${sc.toneScore}%</b>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${sc.toneScore}%;background:#00897b;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-item-name">Ethos &amp; Culture</div>
+          <b>${sc.ethosScore}%</b>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${sc.ethosScore}%;background:#d97706;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-item-name">Rubric Mapping</div>
+          <b>${sc.rubricScore}%</b>
+          <div class="metric-bar-bg"><div class="metric-bar-fill" style="width:${sc.rubricScore}%;background:#5c6bc0;"></div></div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:#444;background:#f3f7f6;padding:6px 10px;border-radius:4px;">
+        ${esc(sc.tip)}
+      </div>
+    </div>
+  `;
+}
+
+function drawAudit(isPreFlight = false) {
+  const container = document.getElementById('auditContent');
+  if (!container) return;
+  if (!S.audit || !S.audit.length) {
+    container.innerHTML = `
+      <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:6px;">✅</div>
+        <b>No coaching discrepancies or evidence gaps detected!</b>
+        <p style="color:#666;font-size:13px;margin:6px 0 14px;">Notes are well-grounded and ready for full synthesis.</p>
+        <button class="b" onclick="analyze(true)">Proceed to Synthesize Sheet</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="margin-bottom:14px;background:#e3efec;border-left:4px solid var(--g);padding:10px 14px;border-radius:4px;">
+      <b>${isPreFlight ? "🔍 Coaching Pre-Flight Calibration:" : "⚖️ AI Synthesis Audit & Clarification:"}</b>
+      <span>Found ${S.audit.length} point(s) where feedback can be sharpened into high-leverage coaching.</span>
+    </div>
+    ${S.audit.map((a, idx) => {
+      let cardClass = "audit-card";
+      let icon = "📝";
+      if (/reframing|tone/i.test(a.type)) { cardClass += " tone"; icon = "🛡️"; }
+      else if (/gap|ambiguity/i.test(a.type)) { cardClass += " gap"; icon = "🔍"; }
+      else if (/longitudinal|continuity/i.test(a.type)) { cardClass += " continuity"; icon = "🔄"; }
+      else if (/contradiction/i.test(a.type)) { cardClass += " contradiction"; icon = "⚠️"; }
+
+      return `
+        <div class="${cardClass}" id="auditCard_${idx}">
+          <div class="audit-card-title">
+            <span>${icon}</span>
+            <span>${esc(a.type)}</span>
+          </div>
+          <div style="font-size:13px;margin-bottom:8px;">${esc(a.message)}</div>
+          ${a.original && a.reframed ? `
+            <div class="reframe-compare">
+              <div class="reframe-orig">Original Note: "${esc(a.original)}"</div>
+              <div class="reframe-suggest">Suggested Coaching Reframe: "${esc(a.reframed)}"</div>
+              <div style="margin-top:6px;">
+                <button class="b alt" onclick="acceptReframe(${idx}, '${esc(a.reframed)}')" style="padding:3px 10px;font-size:11.5px;min-height:28px;">✓ Use Reframed Phrasing</button>
+              </div>
+            </div>
+          ` : ''}
+          ${a.question ? `
+            <div style="margin-top:8px;">
+              <label style="font-size:12px;font-weight:700;color:#333;">${esc(a.question)}</label>
+              ${a.options && a.options.length ? `
+                <div class="chip-group">
+                  ${a.options.map((opt, optIdx) => {
+                    const isRec = opt.includes("(Recommended)");
+                    return `<button type="button" class="option-chip ${isRec ? 'recommended' : ''}" onclick="selectAuditChip(this, 'auditInput_${idx}', '${esc(opt)}')">${esc(opt)}</button>`;
+                  }).join("")}
+                </div>
+              ` : ''}
+              <input id="auditInput_${idx}" data-q="${esc(a.question)}" placeholder="Type or select clarification above..." style="font-size:13px;padding:7px;margin-top:4px;">
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join("")}
+    <div class="bar" style="margin-top:16px;">
+      <button class="b" onclick="applyCalibrationsAndSynthesize()">⚡ Apply Clarifications &amp; Synthesize</button>
+      <button class="b alt" onclick="proceedToPreviewDirectly()">⏩ Skip &amp; Proceed with Current Draft</button>
+    </div>
+  `;
+}
+
+function selectAuditChip(btn, inputId, text) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    const cleanText = text.replace(/^\(Recommended\)\s*/i, "");
+    input.value = cleanText;
+    const parent = btn.closest('.chip-group');
+    if (parent) {
+      parent.querySelectorAll('.option-chip').forEach(c => c.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+  }
+}
+
+function acceptReframe(idx, reframedText) {
+  const card = document.getElementById('auditCard_' + idx);
+  if (card) {
+    card.style.opacity = '0.7';
+    card.style.borderLeftColor = '#2e7d32';
+  }
+  const notesEl = document.getElementById('notes');
+  if (notesEl && S.audit[idx] && S.audit[idx].original) {
+    notesEl.value = notesEl.value.replace(new RegExp(S.audit[idx].original, 'gi'), reframedText);
+    showToast("✅ Note updated with calibrated coaching phrasing!");
+  }
+}
+
+function applyCalibrationsAndSynthesize() {
+  const answers = [...document.querySelectorAll("#audit input[data-q]")].filter(e => e.value.trim()).map(e => ({
+    question: e.dataset.q,
+    answer: e.value.trim()
+  }));
+  S.clar = answers;
+  show("intake");
+  analyze(true);
+}
+
+function proceedToPreviewDirectly() {
+  if (S.c && Object.keys(S.c).length > 0) {
+    drawCoachingScorecardInPreview();
+    show("preview");
+  } else {
+    analyze(true);
+  }
+}
 const heads=(m,forDoc)=>[
 ["Teacher’s Observation Sheet",1],
 ["Name of the teacher: "+m.t],
@@ -284,7 +664,7 @@ function model(m,forDoc){const r=heads(m,forDoc).map(([f,b,raw])=>({f,b,raw}));S
 const model2=()=>[{a:T2[0],b:S.hl,k:"hl"},{a:T2[1],b:S.imp,k:"imp"}];
 const bd=(x,b,raw)=>raw?x:(b?"<b>"+esc(x)+"</b>":esc(x));
 const tbl=r=>`<table>`+r.map(x=>x.f!=null?`<tr><td colspan="2">${bd(x.f,x.b,x.raw)}</td></tr>`:`<tr><td>${bd(x.a,x.bold)}</td><td${x.k!=null?` class="e" contenteditable data-k="${x.k}"`:""}>${bd(x.b,x.bold)}</td></tr>`).join("")+"</table>";
-const drawSheet=()=>{$("#sheet").innerHTML=tbl(model(M())).replace("<table>",'<table><colgroup><col style="width:42%"><col style="width:58%"></colgroup>')+"<h3>Teacher Observation Summary</h3>"+tbl(model2()).replace("<table>",'<table><colgroup><col style="width:42%"><col style="width:58%"></colgroup>')};
+const drawSheet=()=>{$("#sheet").innerHTML=tbl(model(M())).replace("<table>",'<table><colgroup><col style="width:42%"><col style="width:58%"></colgroup>')+"<h3>Teacher Observation Summary</h3>"+tbl(model2()).replace("<table>",'<table><colgroup><col style="width:42%"><col style="width:58%"></colgroup>'); drawCoachingScorecardInPreview();};
 const sync=()=>document.querySelectorAll("#sheet [data-k]").forEach(td=>{const k=td.dataset.k,v=td.innerText.trim();if(k=="hl")S.hl=v;else if(k=="imp")S.imp=v;else S.c["c"+(+k+1)]=v});
 const fname=e=>`Observation_Summary_${M().t.replace(/\s+/g,"_")}_Obs${M().n}_${M().d}.${e}`;
 function word(){sync();const D=docx,B={style:D.BorderStyle.SINGLE,size:8,color:"000000"},bo={top:B,bottom:B,left:B,right:B},W=[4396,6070];
