@@ -73,10 +73,24 @@ section{display:none!important}
 #preview{display:block!important}
 }
 </style></head><body>
-<header><h1>Imani Schools — Teacher Observation &amp; Coaching Portal</h1><p>Capture notes, check them, edit the sheet, export.</p></header>
+<header>
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+  <div>
+    <h1>Imani Schools &mdash; Teacher Observation &amp; Coaching Portal</h1>
+    <p>Capture notes, check them, edit the sheet, export.</p>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span id="netBadge" style="font-size:12px;display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:12px;background:rgba(255,255,255,0.18);"></span>
+    <span id="draftStatus" style="font-size:12px;opacity:0.9;font-style:italic;"></span>
+    <button id="installBtn" class="b alt" onclick="installPWA()" style="display:none;padding:4px 12px;min-height:30px;font-size:12px;background:#fff;color:var(--g);font-weight:600;border:none;">📲 Install App</button>
+  </div>
+</div>
+</header>
 <nav id="nav"></nav>
 <main>
 <section id="intake" class="on">
+<div id="draftBanner" style="display:none;"></div>
+<div id="queueBanner" style="display:none;"></div>
 <div class="meta">
 <div><label>Teacher</label><input id="t" list="tl" onchange="newT()"><datalist id="tl"></datalist></div>
 <div><label>Date of observation</label><input id="d" type="date"></div>
@@ -152,7 +166,319 @@ const T=r=>new D.Table({width:{size:10466,type:D.WidthType.DXA},columnWidths:W,r
 const doc=new D.Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:720,bottom:720,left:720,right:720}}},children:[T(model(M(),true)),new D.Paragraph({spacing:{before:240,after:120},children:[new D.TextRun({text:"Teacher Observation Summary",bold:true,font:"Arial",size:24})]}),T(model2())]}]});
 D.Packer.toBlob(doc).then(b=>saveAs(b,fname("docx")))}
 function pdf(){sync();const oldTitle=document.title;document.title=fname("pdf").replace(/\.pdf$/i,"");window.print();setTimeout(()=>{document.title=oldTitle;},1500)}
-async function save(){sync();const m=M();try{const r=await post("save",{record:{id:S.id,teacher:m.t,date:m.d,grade:m.g,subject:m.s,topic:m.tp,observer:m.o,obs:m.n,notes:S.notes||$("#notes").value,c:S.c,hl:S.hl,imp:S.imp,log:S.audit,formRow:S.formRow}});S.id=r.id;await reload();alert("Saved to Google Sheets.")}catch(e){fail(e)}}
+
+// ─── PWA FIELD RELIABILITY & INDEXEDDB STORAGE ─────────────────────────────
+const IDB = {
+  db: null,
+  async open() {
+    if (this.db) return this.db;
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open('ImaniObservationDB', 1);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts', { keyPath: 'key' });
+        if (!db.objectStoreNames.contains('sync_queue')) db.createObjectStore('sync_queue', { keyPath: 'id' });
+      };
+      req.onsuccess = () => resolve(this.db = req.result);
+      req.onerror = () => reject(req.error);
+    });
+  },
+  async get(store, key) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readonly');
+      const req = tx.objectStore(store).get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  },
+  async set(store, val) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).put(val);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => rej(req.error);
+    });
+  },
+  async del(store, key) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).delete(key);
+      req.onsuccess = () => res(true);
+      req.onerror = () => rej(req.error);
+    });
+  },
+  async all(store) {
+    const db = await this.open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readonly');
+      const req = tx.objectStore(store).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => rej(req.error);
+    });
+  }
+};
+
+let autoSaveTimer = null;
+function setDraftStatus(msg) {
+  const el = document.getElementById('draftStatus');
+  if (el) el.textContent = msg;
+}
+
+function triggerAutoSave() {
+  setDraftStatus("Saving draft...");
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(performAutoSave, 1200);
+}
+
+async function performAutoSave() {
+  const m = M();
+  const rawNotes = $("#notes") ? $("#notes").value : "";
+  if (!m.t && !rawNotes.trim()) {
+    setDraftStatus("");
+    return;
+  }
+  const guided = [...document.querySelectorAll("[data-i]")].map(e => ({
+    i: e.dataset.i,
+    t: e.dataset.t || "",
+    val: e.value
+  }));
+  const draft = {
+    key: 'active_draft',
+    meta: m,
+    notes: rawNotes,
+    guided: guided,
+    state: { c: S.c, hl: S.hl, imp: S.imp, audit: S.audit, id: S.id, formRow: S.formRow },
+    updatedAt: new Date().toISOString()
+  };
+  try {
+    await IDB.set('drafts', draft);
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setDraftStatus(`Draft auto-saved (${timeStr})`);
+  } catch(e) {
+    console.warn("Auto-save warning:", e);
+  }
+}
+
+async function checkDraftOnLoad() {
+  try {
+    const draft = await IDB.get('drafts', 'active_draft');
+    if (!draft || (!draft.notes?.trim() && !draft.meta?.t)) return;
+    const banner = document.getElementById('draftBanner');
+    if (!banner) return;
+    const time = new Date(draft.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const teacherName = draft.meta?.t || 'Unnamed Teacher';
+    banner.innerHTML = `
+      <div class="banner" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#e3efec;border-left:4px solid var(--g);margin:10px 0;padding:10px 14px;border-radius:4px;">
+        <div>
+          <b>📝 Unsaved draft found for "${esc(teacherName)}"</b> (auto-saved at ${time})
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="b" onclick="restoreDraft()" style="padding:4px 12px;font-size:13px;min-height:32px;">Restore Draft</button>
+          <button class="b alt" onclick="discardDraft()" style="padding:4px 12px;font-size:13px;min-height:32px;">Discard</button>
+        </div>
+      </div>
+    `;
+    banner.style.display = 'block';
+  } catch(e) {
+    console.error("Draft check failed:", e);
+  }
+}
+
+async function restoreDraft() {
+  try {
+    const draft = await IDB.get('drafts', 'active_draft');
+    if (!draft) return;
+    setM(draft.meta);
+    if ($("#notes")) $("#notes").value = draft.notes || "";
+    if (draft.guided) {
+      draft.guided.forEach(g => {
+        const input = document.querySelector(`input[data-i="${g.i}"]`);
+        if (input) {
+          input.value = g.val || "";
+          input.dataset.t = g.t || "";
+          const p = input.parentNode;
+          if (p) {
+            p.querySelectorAll(".chip").forEach(x => {
+              const isAppr = x.textContent.includes("Appreciation") && g.t.includes("APPRECIATION");
+              const isAppreh = x.textContent.includes("Apprehension") && g.t.includes("APPREHENSION");
+              x.style.background = (isAppr || isAppreh) ? "#cfe8e2" : "#fff";
+            });
+          }
+        }
+      });
+    }
+    if (draft.state) {
+      S.c = draft.state.c || {};
+      S.hl = draft.state.hl || "";
+      S.imp = draft.state.imp || "";
+      S.audit = draft.state.audit || [];
+      S.id = draft.state.id;
+      S.formRow = draft.state.formRow;
+    }
+    document.getElementById('draftBanner').style.display = 'none';
+    showToast("✅ Draft restored successfully!");
+    chk();
+  } catch(e) {
+    console.error("Restore error:", e);
+  }
+}
+
+async function discardDraft() {
+  if (confirm("Are you sure you want to discard this unsaved draft?")) {
+    await IDB.del('drafts', 'active_draft');
+    document.getElementById('draftBanner').style.display = 'none';
+    setDraftStatus("");
+  }
+}
+
+async function updateQueueBadge() {
+  try {
+    const queue = await IDB.all('sync_queue');
+    const qb = document.getElementById('queueBanner');
+    if (!qb) return;
+    if (queue.length > 0) {
+      qb.innerHTML = `
+        <div class="banner" style="background:#fff3cd;border-left:4px solid #856404;color:#856404;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:4px;margin:10px 0;">
+          <div><b>📡 Offline Queue:</b> ${queue.length} observation(s) saved locally pending sync to Google Sheets.</div>
+          <button class="b" onclick="processSyncQueue()" style="padding:4px 12px;font-size:13px;min-height:32px;">Sync Now</button>
+        </div>
+      `;
+      qb.style.display = 'block';
+    } else {
+      qb.style.display = 'none';
+    }
+  } catch(e) {
+    console.error("Queue badge error:", e);
+  }
+}
+
+async function processSyncQueue() {
+  if (!navigator.onLine) {
+    alert("Still offline. Reconnect to the internet to sync pending observations.");
+    return;
+  }
+  try {
+    const queue = await IDB.all('sync_queue');
+    if (!queue.length) return;
+    let synced = 0;
+    for (const item of queue) {
+      try {
+        await post("save", { record: item.record });
+        await IDB.del('sync_queue', item.id);
+        synced++;
+      } catch(e) {
+        console.warn("Sync failed for item:", item.id, e);
+      }
+    }
+    if (synced > 0) {
+      await updateQueueBadge();
+      await reload();
+      showToast(`✅ Synced ${synced} observation(s) to Google Sheets!`);
+    }
+  } catch(e) {
+    console.error("Queue process error:", e);
+  }
+}
+
+function updateNetworkUI() {
+  const badge = document.getElementById('netBadge');
+  if (!badge) return;
+  if (navigator.onLine) {
+    badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#48bb78;"></span>Online`;
+    badge.title = "Connected to internet";
+    processSyncQueue();
+  } else {
+    badge.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f56565;"></span>Offline (Saving locally)`;
+    badge.title = "Offline - notes saved to device";
+  }
+  updateQueueBadge();
+}
+
+window.addEventListener('online', updateNetworkUI);
+window.addEventListener('offline', updateNetworkUI);
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'inline-block';
+});
+
+async function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+}
+
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('installBtn');
+  if (btn) btn.style.display = 'none';
+  showToast("🎉 Portal installed as standalone app!");
+});
+
+function showToast(msg) {
+  let toast = document.getElementById('appToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'appToast';
+    toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--g);color:#fff;padding:12px 20px;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.25);z-index:9999;font-weight:600;font-size:14px;transition:opacity 0.3s ease;opacity:0;pointer-events:none;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+}
+
+async function save(){
+  sync();
+  const m = M();
+  const recData = {
+    id: S.id || (window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'obs_' + Date.now()),
+    teacher: m.t,
+    date: m.d,
+    grade: m.g,
+    subject: m.s,
+    topic: m.tp,
+    observer: m.o,
+    obs: m.n,
+    notes: S.notes || $("#notes").value,
+    c: S.c,
+    hl: S.hl,
+    imp: S.imp,
+    log: S.audit,
+    formRow: S.formRow
+  };
+
+  if (!navigator.onLine) {
+    await IDB.set('sync_queue', { id: recData.id, record: recData, queuedAt: new Date().toISOString() });
+    await IDB.del('drafts', 'active_draft');
+    updateQueueBadge();
+    setDraftStatus("Saved to offline queue");
+    alert("📡 Offline Mode: Observation saved safely to your device's local queue! It will automatically sync to Google Sheets once Wi-Fi reconnects.");
+    return;
+  }
+
+  try {
+    const r = await post("save", { record: recData });
+    S.id = r.id;
+    await IDB.del('drafts', 'active_draft');
+    setDraftStatus("All changes saved");
+    await reload();
+    showToast("✅ Successfully saved to Google Sheets!");
+  } catch(e) {
+    await IDB.set('sync_queue', { id: recData.id, record: recData, queuedAt: new Date().toISOString() });
+    updateQueueBadge();
+    alert("Network request failed. Observation saved safely to your offline queue! It will sync automatically when connection restores.");
+  }
+}
 async function reload(){try{HIST=(await get("history")).records;$("#tl").innerHTML=[...new Set(HIST.map(r=>r.teacher))].map(t=>`<option value="${esc(t)}">`).join("");arch()}catch(e){if(!API.startsWith("PASTE"))fail(e)}}
 function arch(){const f=["at","ag","as","ao"].map(i=>$("#"+i).value.toLowerCase()),L=HIST.filter(r=>[r.teacher,r.grade,r.subject,r.observer].every((v,i)=>String(v).toLowerCase().includes(f[i])));
 $("#alist").innerHTML=L.map(r=>`<div class="card"><b>${esc(r.teacher)}</b>, Obs ${esc(r.obs)}, ${esc(r.date)}<br><small>Grade ${esc(r.grade)}, ${esc(r.subject)}, ${esc(r.topic)}, observer ${esc(r.observer)}</small><br><button class="b alt" onclick="openRec('${r.id}')">Open</button></div>`).join("")||"<p>No saved observations match.</p>"}
@@ -162,4 +488,19 @@ $("#plist").innerHTML=PEND.map((p,i)=>`<div class="card"><b>${esc(p.teacher)}</b
 function useP(i){const p=PEND[i];setM({t:p.teacher,d:p.date,g:p.grade,s:p.subject,tp:p.topic,o:p.observer,n:p.obs});$("#notes").value=p.notes;S.formRow=p.row;show("intake");analyze()}
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 show("intake");reload();
+updateNetworkUI();
+checkDraftOnLoad();
+updateQueueBadge();
+
+document.addEventListener('input', e => {
+  if (e.target.closest('#intake') || e.target.closest('#sheet')) {
+    triggerAutoSave();
+  }
+});
+document.addEventListener('change', e => {
+  if (e.target.closest('#intake')) {
+    triggerAutoSave();
+  }
+});
+
 </script></body></html>
