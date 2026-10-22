@@ -2,6 +2,7 @@
 <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="d3.v7.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Noto+Naskh+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
@@ -54,7 +55,7 @@ details{background:#fff;border:1px solid var(--line);margin:8px 0}summary{paddin
 @media(max-width:700px){
 header h1{font-size:16px}header p{display:none}
 nav{position:fixed;bottom:0;left:0;right:0;z-index:10;padding:0 0 env(safe-area-inset-bottom);gap:0;flex-wrap:nowrap;border-top:1px solid var(--line)}
-nav button{flex:1;padding:12px 2px;font-size:13px;border-bottom:0;border-top:3px solid transparent}nav button.on{border-top-color:var(--g)}
+nav button{flex:1;padding:12px 2px;font-size:11.5px;border-bottom:0;border-top:3px solid transparent;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}nav button.on{border-top-color:var(--g)}
 main{padding:14px 12px calc(80px + env(safe-area-inset-bottom))}
 .meta{grid-template-columns:1fr 1fr}.bar .b{flex:1 1 45%}#go{width:100%}
 textarea{min-height:240px}.gi input{margin-top:4px}.chip{padding:6px 12px;font-size:13px}
@@ -72,6 +73,33 @@ main{padding:0!important;max-width:none!important}
 section{display:none!important}
 #preview{display:block!important}
 }
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.kpi-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:14px;position:relative;border-top:4px solid var(--g);box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.kpi-card.c-green{border-top-color:#2e7d32}
+.kpi-card.c-amber{border-top-color:#d97706}
+.kpi-card.c-teal{border-top-color:#00897b}
+.kpi-val{font-size:24px;font-weight:700;color:var(--ink);margin:4px 0}
+.kpi-label{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+.kpi-sub{font-size:12px;color:#666;margin-top:2px}
+.filter-bar{background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px;margin-bottom:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr)) auto;gap:10px;align-items:end}
+.filter-bar select{width:100%;padding:8px;border:1px solid var(--line);border-radius:4px;background:#fff;font-size:14px}
+.chart-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:16px;margin:14px 0;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.chart-card h3{margin:0 0 10px;font-size:15px;font-weight:700;color:var(--g);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.charts-row{grid-template-columns:1fr}}
+.leaderboard-list{list-style:none;padding:0;margin:0}
+.leaderboard-item{display:flex;justify-content:space-between;align-items:center;padding:9px 8px;border-bottom:1px solid #edf2f1;font-size:13px}
+.leaderboard-item:last-child{border-bottom:none}
+.leaderboard-badge{border-radius:12px;padding:3px 9px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-appr{background:#e8f5e9;color:#2e7d32}
+.badge-appreh{background:#fff3e0;color:#d97706}
+.timeline-container{position:relative;padding-left:18px;border-left:2px solid var(--line);margin:12px 0 12px 8px}
+.timeline-node{position:relative;margin-bottom:18px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px}
+.timeline-node::before{content:'';position:absolute;left:-25px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--g);border:2px solid #fff}
+.timeline-header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;margin-bottom:8px;gap:6px}
+.timeline-tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--g2);color:var(--g)}
+.continuity-alert{background:#e3efec;border-left:3px solid var(--g);padding:6px 10px;font-size:12px;border-radius:3px;margin:8px 0}
+#d3-tooltip{position:fixed;display:none;background:rgba(23,32,31,0.95);color:#fff;padding:8px 12px;border-radius:6px;font-size:12px;pointer-events:none;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.18);max-width:280px;line-height:1.4}
 </style></head><body>
 <header>
 <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -108,6 +136,105 @@ section{display:none!important}
 <div class="bar noprint"><button class="b" onclick="save()">Save to Google Sheets</button><button class="b alt" onclick="word()">Download Word (.docx)</button><button class="b alt" onclick="pdf()">Download PDF (.pdf)</button><button class="b alt" onclick="window.print()">Print</button></div>
 <p class="noprint"><small>Click any right-hand cell to edit it before saving or exporting.</small></p>
 <div class="sheet" id="sheet"></div></section>
+<section id="analytics">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+  <div>
+    <h2 style="margin:0;color:var(--g);font-size:20px;">Teacher Growth &amp; Leadership Analytics</h2>
+    <p style="margin:2px 0 0;font-size:13px;color:#555;">School-wide pedagogical footprint, standards distribution &amp; longitudinal growth.</p>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+    <button class="b alt" onclick="reload()" style="padding:6px 14px;font-size:13px;">🔄 Refresh Data</button>
+    <button class="b alt" onclick="exportAnalyticsSummary()" style="padding:6px 14px;font-size:13px;">📋 Copy Summary</button>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div>
+    <label>Filter Teacher</label>
+    <select id="kpiTeacher" onchange="renderAnalytics()"><option value="">All Teachers</option></select>
+  </div>
+  <div>
+    <label>Filter Grade</label>
+    <select id="kpiGrade" onchange="renderAnalytics()"><option value="">All Grades</option></select>
+  </div>
+  <div>
+    <label>Filter Subject</label>
+    <select id="kpiSubject" onchange="renderAnalytics()"><option value="">All Subjects</option></select>
+  </div>
+  <div>
+    <button class="b alt" onclick="resetKpiFilters()" style="padding:8px 12px;font-size:13px;width:100%;">Reset Filters</button>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Observations Conducted</div>
+    <div class="kpi-val" id="kpiTotalObs">0</div>
+    <div class="kpi-sub" id="kpiObsDetail">Across 0 teachers</div>
+  </div>
+  <div class="kpi-card c-green">
+    <div class="kpi-label">Commendation Ratio</div>
+    <div class="kpi-val" id="kpiCommendRatio">0%</div>
+    <div class="kpi-sub" id="kpiCommendDetail">0 appreciations logged</div>
+  </div>
+  <div class="kpi-card c-teal">
+    <div class="kpi-label">Leading Strength</div>
+    <div class="kpi-val" id="kpiTopStrength" style="font-size:18px;line-height:1.2;">&mdash;</div>
+    <div class="kpi-sub" id="kpiStrengthDetail">Highest appreciation rate</div>
+  </div>
+  <div class="kpi-card c-amber">
+    <div class="kpi-label">Priority Growth Focus</div>
+    <div class="kpi-val" id="kpiTopGrowth" style="font-size:18px;line-height:1.2;">&mdash;</div>
+    <div class="kpi-sub" id="kpiGrowthDetail">Target for upcoming coaching</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h3>
+    <span>📊 Standards Distribution: Strengths vs. Coaching Areas</span>
+    <span style="font-size:12px;font-weight:normal;color:#666;">
+      <span style="display:inline-block;width:10px;height:10px;background:#2e7d32;border-radius:2px;margin-right:3px;"></span>Appreciations
+      <span style="display:inline-block;width:10px;height:10px;background:#d97706;border-radius:2px;margin:0 3px 0 10px;"></span>Apprehensions
+    </span>
+  </h3>
+  <div id="standardsBarChart" style="width:100%;min-height:220px;overflow-x:auto;"></div>
+</div>
+
+<div class="charts-row">
+  <div class="chart-card">
+    <h3 style="color:#2e7d32;">🌟 Top Commended Practices</h3>
+    <ul class="leaderboard-list" id="topStrengthsList"></ul>
+  </div>
+  <div class="chart-card">
+    <h3 style="color:#d97706;">🎯 Priority Coaching Opportunities</h3>
+    <ul class="leaderboard-list" id="topGrowthList"></ul>
+  </div>
+</div>
+
+<div class="chart-card" id="teacherDeepDiveSection">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px;">
+    <div>
+      <h3 style="margin:0;color:var(--g);">🌱 Longitudinal Teacher Growth &amp; Pedagogical Footprint</h3>
+      <small style="color:#666;">Track sequential observations, focus area follow-through, and 5-standards mastery.</small>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="margin:0;font-size:12px;">Teacher:</label>
+      <select id="deepDiveTeacher" onchange="renderTeacherDeepDive()" style="padding:6px 10px;font-size:13px;border-radius:4px;border:1px solid var(--line);background:#fff;"></select>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div>
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:#333;text-align:center;">Pedagogical Competency Profile</div>
+      <div id="teacherRadarChart" style="display:flex;justify-content:center;align-items:center;min-height:310px;"></div>
+    </div>
+    <div>
+      <div style="font-weight:600;font-size:13px;margin-bottom:6px;color:#333;">Sequential Observation Journey</div>
+      <div id="teacherTimeline"></div>
+    </div>
+  </div>
+</div>
+</section>
 <section id="archive">
 <div class="meta"><div><label>Teacher</label><input id="at" oninput="arch()"></div><div><label>Grade</label><input id="ag" oninput="arch()"></div><div><label>Subject</label><input id="as" oninput="arch()"></div><div><label>Observer</label><input id="ao" oninput="arch()"></div></div>
 <div class="bar"><button class="b alt" onclick="reload()">Refresh archive</button><button class="b" onclick="pend()">Pull pending Google Form submissions</button></div>
@@ -126,9 +253,9 @@ const fail=e=>alert(e.message||e);
 let S={c:{},hl:"",imp:"",audit:[],clar:[]},HIST=[],PEND=[],rec;
 const M=()=>({t:$("#t").value.trim(),d:$("#d").value,g:$("#g").value,s:$("#s").value,tp:$("#tp").value,o:$("#o").value,n:$("#n").value});
 const setM=m=>{$("#t").value=m.t||"";$("#d").value=m.d||"";$("#g").value=m.g||"";$("#s").value=m.s||"";$("#tp").value=m.tp||"";$("#o").value=m.o||"";$("#n").value=m.n||1};
-const TABS=[["intake","New observation"],["audit","Audit"],["preview","Sheet"],["archive","Archive"]];
+const TABS=[["intake","New observation"],["audit","Audit"],["preview","Sheet"],["analytics","Analytics"],["archive","Archive"]];
 $("#nav").innerHTML=TABS.map(([k,l])=>`<button onclick="show('${k}')">${l}</button>`).join("");
-function show(id){if(id=="preview"){sync();drawSheet()}TABS.forEach(([k],i)=>{$("#"+k).classList.toggle("on",k==id);$("#nav").children[i].classList.toggle("on",k==id)});if(id=="archive")arch()}
+function show(id){if(id=="preview"){sync();drawSheet()}if(id=="analytics"){renderAnalytics()}TABS.forEach(([k],i)=>{$("#"+k).classList.toggle("on",k==id);$("#nav").children[i].classList.toggle("on",k==id)});if(id=="archive")arch()}
 $("#d").value=new Date().toISOString().slice(0,10);
 $("#guided").innerHTML=SEC.map(s=>`<details><summary>${esc(s.h)}</summary>${s.i.map(c=>`<div class="gi"><small>${esc(c.split("\n")[0])}</small><span class="chip" onclick="tag(this,' APPRECIATION')">+ Appreciation</span><span class="chip" onclick="tag(this,' APPREHENSION')">! Apprehension</span><input data-i="${FLAT.indexOf(c)}" placeholder="Evidence you saw"></div>`).join("")}</details>`).join("");
 function tag(c,t){const p=c.parentNode,i=p.querySelector("input");i.dataset.t=i.dataset.t==t?"":t;p.querySelectorAll(".chip").forEach(x=>x.style.background=x==c&&i.dataset.t?"#cfe8e2":"#fff")}
@@ -479,13 +606,547 @@ async function save(){
     alert("Network request failed. Observation saved safely to your offline queue! It will sync automatically when connection restores.");
   }
 }
-async function reload(){try{HIST=(await get("history")).records;$("#tl").innerHTML=[...new Set(HIST.map(r=>r.teacher))].map(t=>`<option value="${esc(t)}">`).join("");arch()}catch(e){if(!API.startsWith("PASTE"))fail(e)}}
+async function reload(){
+  try{
+    HIST=(await get("history")).records;
+    try{ await IDB.set('drafts', { key: 'history_cache', records: HIST, savedAt: new Date().toISOString() }); }catch(err){}
+  }catch(e){
+    try{
+      const cached = await IDB.get('drafts', 'history_cache');
+      if(cached && cached.records && cached.records.length){
+        HIST = cached.records;
+        showToast("📡 Loaded observation history from offline cache.");
+      } else {
+        if(!API.startsWith("PASTE")) fail(e);
+      }
+    }catch(err){
+      if(!API.startsWith("PASTE")) fail(e);
+    }
+  }
+  const teachers = [...new Set(HIST.map(r=>r.teacher))].filter(Boolean);
+  $("#tl").innerHTML=teachers.map(t=>`<option value="${esc(t)}">`).join("");
+  arch();
+  populateKpiFilterDropdowns();
+  renderAnalytics();
+}
 function arch(){const f=["at","ag","as","ao"].map(i=>$("#"+i).value.toLowerCase()),L=HIST.filter(r=>[r.teacher,r.grade,r.subject,r.observer].every((v,i)=>String(v).toLowerCase().includes(f[i])));
 $("#alist").innerHTML=L.map(r=>`<div class="card"><b>${esc(r.teacher)}</b>, Obs ${esc(r.obs)}, ${esc(r.date)}<br><small>Grade ${esc(r.grade)}, ${esc(r.subject)}, ${esc(r.topic)}, observer ${esc(r.observer)}</small><br><button class="b alt" onclick="openRec('${r.id}')">Open</button></div>`).join("")||"<p>No saved observations match.</p>"}
 function openRec(id){const r=HIST.find(x=>x.id==id);setM({t:r.teacher,d:r.date,g:r.grade,s:r.subject,tp:r.topic,o:r.observer,n:r.obs});S={c:r.c||{},hl:r.hl,imp:r.imp,audit:[],clar:[],id:r.id,notes:r.notes};show("preview")}
 async function pend(){try{PEND=(await get("pending")).pending}catch(e){return fail(e)}
 $("#plist").innerHTML=PEND.map((p,i)=>`<div class="card"><b>${esc(p.teacher)}</b>, ${esc(p.date)}, ${esc(p.observer)}<br><small>${esc(String(p.notes).slice(0,140))}</small><br><button class="b alt" onclick="useP(${i})">Synthesize and open</button></div>`).join("")||"<p>No pending submissions.</p>"}
 function useP(i){const p=PEND[i];setM({t:p.teacher,d:p.date,g:p.grade,s:p.subject,tp:p.topic,o:p.observer,n:p.obs});$("#notes").value=p.notes;S.formRow=p.row;show("intake");analyze()}
+
+// ─── LEADERSHIP ANALYTICS & D3 VISUALIZATIONS ─────────────────────────────
+function showTooltip(html, e) {
+  let tt = document.getElementById('d3-tooltip');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = 'd3-tooltip';
+    document.body.appendChild(tt);
+  }
+  tt.innerHTML = html;
+  tt.style.display = 'block';
+  const x = Math.min(window.innerWidth - 290, (e.clientX || (e.touches && e.touches[0].clientX) || 100) + 12);
+  const y = Math.min(window.innerHeight - 120, (e.clientY || (e.touches && e.touches[0].clientY) || 100) + 12);
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+function hideTooltip() {
+  const tt = document.getElementById('d3-tooltip');
+  if (tt) tt.style.display = 'none';
+}
+
+function populateKpiFilterDropdowns() {
+  const teachers = [...new Set(HIST.map(r => r.teacher))].filter(Boolean).sort();
+  const grades = [...new Set(HIST.map(r => r.grade))].filter(Boolean).sort();
+  const subjects = [...new Set(HIST.map(r => r.subject))].filter(Boolean).sort();
+
+  const fillSel = (id, list, placeholder) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = `<option value="">${placeholder}</option>` + list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+    if (list.includes(cur)) el.value = cur;
+  };
+
+  fillSel('kpiTeacher', teachers, 'All Teachers');
+  fillSel('kpiGrade', grades, 'All Grades');
+  fillSel('kpiSubject', subjects, 'All Subjects');
+
+  const ddTeacher = document.getElementById('deepDiveTeacher');
+  if (ddTeacher) {
+    const curT = ddTeacher.value;
+    ddTeacher.innerHTML = teachers.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+    if (teachers.includes(curT)) ddTeacher.value = curT;
+    else if (teachers.length) ddTeacher.value = teachers[0];
+  }
+}
+
+function resetKpiFilters() {
+  if ($('#kpiTeacher')) $('#kpiTeacher').value = "";
+  if ($('#kpiGrade')) $('#kpiGrade').value = "";
+  if ($('#kpiSubject')) $('#kpiSubject').value = "";
+  renderAnalytics();
+}
+
+function getFilteredRecords() {
+  const t = ($('#kpiTeacher') && $('#kpiTeacher').value) || "";
+  const g = ($('#kpiGrade') && $('#kpiGrade').value) || "";
+  const s = ($('#kpiSubject') && $('#kpiSubject').value) || "";
+
+  return HIST.filter(r => {
+    if (t && r.teacher !== t) return false;
+    if (g && r.grade !== g) return false;
+    if (s && r.subject !== s) return false;
+    return true;
+  });
+}
+
+function renderAnalytics() {
+  if (!HIST || !HIST.length) {
+    if ($('#kpiTotalObs')) $('#kpiTotalObs').textContent = "0";
+    if ($('#kpiObsDetail')) $('#kpiObsDetail').textContent = "No saved observations";
+    return;
+  }
+
+  const recs = getFilteredRecords();
+  const totalObs = recs.length;
+  const uniqueTeachers = new Set(recs.map(r => r.teacher)).size;
+  const uniqueGrades = new Set(recs.map(r => r.grade)).size;
+
+  const critStats = FLAT.map((c, idx) => {
+    let appr = 0, appreh = 0;
+    recs.forEach(r => {
+      const txt = (r.c && r.c["c" + (idx + 1)]) || "";
+      if (/appreciation/i.test(txt)) appr++;
+      if (/apprehension/i.test(txt)) appreh++;
+    });
+    return {
+      idx,
+      text: c,
+      shortTitle: c.split("\n")[0],
+      appr,
+      appreh,
+      total: appr + appreh
+    };
+  });
+
+  const totalAppr = critStats.reduce((acc, c) => acc + c.appr, 0);
+  const totalAppreh = critStats.reduce((acc, c) => acc + c.appreh, 0);
+  const commendRatio = (totalAppr + totalAppreh) > 0 ? Math.round((totalAppr / (totalAppr + totalAppreh)) * 100) : 0;
+
+  const stdGroups = [
+    { id: "std1_3", label: "Std 1&3: Lesson Plan & Execution", shortLabel: "Std 1&3: Lesson Plan", indices: [0,1,2,3,4,5,6,7,8,9,10] },
+    { id: "std2", label: "Std 2: Classroom Culture & Inclusion", shortLabel: "Std 2: Culture & Inclusion", indices: [11,12,13,14,15] },
+    { id: "std4", label: "Std 4: Pedagogical Content Knowledge", shortLabel: "Std 4: Content & Literacy", indices: [16,17,18] },
+    { id: "std5", label: "Std 5: Formative Assessment", shortLabel: "Std 5: Assessment", indices: [19] }
+  ];
+
+  stdGroups.forEach(grp => {
+    grp.appr = grp.indices.reduce((sum, idx) => sum + critStats[idx].appr, 0);
+    grp.appreh = grp.indices.reduce((sum, idx) => sum + critStats[idx].appreh, 0);
+    grp.total = grp.appr + grp.appreh;
+    grp.pct = grp.total > 0 ? Math.round((grp.appr / grp.total) * 100) : 0;
+  });
+
+  const sortedByStrength = [...stdGroups].filter(g => g.total > 0).sort((a,b) => b.pct - a.pct || b.appr - a.appr);
+  const leadingStd = sortedByStrength.length ? sortedByStrength[0] : null;
+
+  const sortedByGrowth = [...stdGroups].filter(g => g.appreh > 0).sort((a,b) => b.appreh - a.appreh);
+  const priorityStd = sortedByGrowth.length ? sortedByGrowth[0] : null;
+
+  if ($('#kpiTotalObs')) $('#kpiTotalObs').textContent = totalObs;
+  if ($('#kpiObsDetail')) $('#kpiObsDetail').textContent = `Across ${uniqueTeachers} teacher(s), ${uniqueGrades} grade(s)`;
+  if ($('#kpiCommendRatio')) $('#kpiCommendRatio').textContent = `${commendRatio}%`;
+  if ($('#kpiCommendDetail')) $('#kpiCommendDetail').textContent = `${totalAppr} appreciations vs ${totalAppreh} growth points`;
+  if ($('#kpiTopStrength')) $('#kpiTopStrength').textContent = leadingStd ? leadingStd.shortLabel : "None logged";
+  if ($('#kpiStrengthDetail')) $('#kpiStrengthDetail').textContent = leadingStd ? `${leadingStd.pct}% commendation rate (${leadingStd.appr} notes)` : "No data";
+  if ($('#kpiTopGrowth')) $('#kpiTopGrowth').textContent = priorityStd ? priorityStd.shortLabel : "None identified";
+  if ($('#kpiGrowthDetail')) $('#kpiGrowthDetail').textContent = priorityStd ? `${priorityStd.appreh} coaching focus points` : "No data";
+
+  // Leaderboards
+  const topCommended = [...critStats].filter(c => c.appr > 0).sort((a,b) => b.appr - a.appr).slice(0, 4);
+  const topStrengthsList = document.getElementById('topStrengthsList');
+  if (topStrengthsList) {
+    topStrengthsList.innerHTML = topCommended.length ? topCommended.map(c => `
+      <li class="leaderboard-item">
+        <div style="flex:1;padding-right:10px;">
+          <div style="font-weight:600;">${esc(c.shortTitle)}</div>
+          <small style="color:#777;">Criterion ${c.idx + 1}</small>
+        </div>
+        <span class="leaderboard-badge badge-appr">+${c.appr} Appreciations</span>
+      </li>
+    `).join("") : '<li style="padding:10px;color:#777;font-size:13px;">No appreciations recorded yet.</li>';
+  }
+
+  const topCoaching = [...critStats].filter(c => c.appreh > 0).sort((a,b) => b.appreh - a.appreh).slice(0, 4);
+  const topGrowthList = document.getElementById('topGrowthList');
+  if (topGrowthList) {
+    topGrowthList.innerHTML = topCoaching.length ? topCoaching.map(c => `
+      <li class="leaderboard-item">
+        <div style="flex:1;padding-right:10px;">
+          <div style="font-weight:600;">${esc(c.shortTitle)}</div>
+          <small style="color:#777;">Criterion ${c.idx + 1}</small>
+        </div>
+        <span class="leaderboard-badge badge-appreh">! ${c.appreh} Focus Notes</span>
+      </li>
+    `).join("") : '<li style="padding:10px;color:#777;font-size:13px;">No coaching areas recorded yet.</li>';
+  }
+
+  drawStandardsBarChart(stdGroups);
+  renderTeacherDeepDive();
+}
+
+function drawStandardsBarChart(data) {
+  const container = d3.select("#standardsBarChart");
+  container.html("");
+  if (typeof d3 === "undefined") {
+    container.html("<p style='padding:20px;color:#888;'>Chart library loading...</p>");
+    return;
+  }
+
+  const margin = { top: 15, right: 40, bottom: 35, left: 175 };
+  const width = 700;
+  const height = 220;
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const svg = container.append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .style("width", "100%")
+    .style("height", "auto")
+    .style("max-height", "260px");
+
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const maxVal = Math.max(1, d3.max(data, d => Math.max(d.appr, d.appreh)));
+  const xScale = d3.scaleLinear()
+    .domain([0, maxVal])
+    .range([0, innerWidth])
+    .nice();
+
+  const yScale = d3.scaleBand()
+    .domain(data.map(d => d.shortLabel))
+    .range([0, innerHeight])
+    .padding(0.28);
+
+  const ySubScale = d3.scaleBand()
+    .domain(['appr', 'appreh'])
+    .range([0, yScale.bandwidth()])
+    .padding(0.08);
+
+  // X Axis
+  g.append("g")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(d3.axisBottom(xScale).ticks(Math.min(maxVal, 6)).tickFormat(d3.format('d')))
+    .call(axis => axis.select(".domain").attr("stroke", "#c9d6d3"))
+    .call(axis => axis.selectAll(".tick line").attr("stroke", "#e0e7e5"))
+    .selectAll("text")
+    .attr("font-size", "11px");
+
+  // Y Axis
+  g.append("g")
+    .call(d3.axisLeft(yScale))
+    .call(axis => axis.select(".domain").attr("stroke", "#c9d6d3"))
+    .call(axis => axis.selectAll(".tick line").remove())
+    .selectAll("text")
+    .attr("font-size", "12px")
+    .attr("font-weight", "600")
+    .attr("fill", "#17201f");
+
+  // Groups for bars
+  const groups = g.selectAll(".std-group")
+    .data(data)
+    .enter()
+    .append("g")
+    .attr("transform", d => `translate(0,${yScale(d.shortLabel)})`);
+
+  // Appreciation Bars (Green)
+  groups.append("rect")
+    .attr("x", 0)
+    .attr("y", ySubScale('appr'))
+    .attr("width", d => xScale(d.appr))
+    .attr("height", ySubScale.bandwidth())
+    .attr("fill", "#2e7d32")
+    .attr("rx", 3)
+    .style("cursor", "pointer")
+    .on("mouseover", (event, d) => {
+      showTooltip(`<b>${esc(d.label)}</b><br><span style="color:#81c784;">Appreciations:</span> <b>${d.appr}</b> (${d.pct}% commendation rate)`, event);
+    })
+    .on("mousemove", (event, d) => {
+      showTooltip(`<b>${esc(d.label)}</b><br><span style="color:#81c784;">Appreciations:</span> <b>${d.appr}</b> (${d.pct}% commendation rate)`, event);
+    })
+    .on("mouseout", hideTooltip);
+
+  // Appreciation Labels
+  groups.filter(d => d.appr > 0).append("text")
+    .attr("x", d => xScale(d.appr) + 5)
+    .attr("y", ySubScale('appr') + ySubScale.bandwidth() / 2 + 3.5)
+    .attr("font-size", "10px")
+    .attr("font-weight", "700")
+    .attr("fill", "#2e7d32")
+    .text(d => `+${d.appr}`);
+
+  // Apprehension Bars (Amber)
+  groups.append("rect")
+    .attr("x", 0)
+    .attr("y", ySubScale('appreh'))
+    .attr("width", d => xScale(d.appreh))
+    .attr("height", ySubScale.bandwidth())
+    .attr("fill", "#d97706")
+    .attr("rx", 3)
+    .style("cursor", "pointer")
+    .on("mouseover", (event, d) => {
+      showTooltip(`<b>${esc(d.label)}</b><br><span style="color:#ffb74d;">Coaching Focus:</span> <b>${d.appreh}</b> points`, event);
+    })
+    .on("mousemove", (event, d) => {
+      showTooltip(`<b>${esc(d.label)}</b><br><span style="color:#ffb74d;">Coaching Focus:</span> <b>${d.appreh}</b> points`, event);
+    })
+    .on("mouseout", hideTooltip);
+
+  // Apprehension Labels
+  groups.filter(d => d.appreh > 0).append("text")
+    .attr("x", d => xScale(d.appreh) + 5)
+    .attr("y", ySubScale('appreh') + ySubScale.bandwidth() / 2 + 3.5)
+    .attr("font-size", "10px")
+    .attr("font-weight", "700")
+    .attr("fill", "#d97706")
+    .text(d => `!${d.appreh}`);
+}
+
+function renderTeacherDeepDive() {
+  const ddSel = document.getElementById('deepDiveTeacher');
+  const tName = ddSel ? ddSel.value : "";
+  const teacherRecords = HIST.filter(r => r.teacher === tName).sort((a,b) => a.obs - b.obs);
+
+  const timelineContainer = document.getElementById('teacherTimeline');
+  if (!timelineContainer) return;
+
+  if (!tName || !teacherRecords.length) {
+    timelineContainer.innerHTML = `<p style="padding:20px;color:#777;font-size:13px;">No observations recorded for ${esc(tName || "this teacher")}.</p>`;
+    d3.select('#teacherRadarChart').html("<p style='padding:20px;color:#777;font-size:13px;'>No profile data available.</p>");
+    return;
+  }
+
+  // Draw Radar Chart for this teacher
+  drawTeacherRadar(teacherRecords, tName);
+
+  // Draw Longitudinal Timeline
+  timelineContainer.innerHTML = `
+    <div class="timeline-container">
+      ${teacherRecords.map((r, idx) => {
+        const prev = idx > 0 ? teacherRecords[idx - 1] : null;
+        const hlLines = String(r.hl || "").split("\n").filter(l => l.trim());
+        const impLines = String(r.imp || "").split("\n").filter(l => l.trim());
+        return `
+          <div class="timeline-node">
+            <div class="timeline-header">
+              <div>
+                <span class="timeline-tag">Obs #${esc(r.obs)}</span>
+                <b style="margin-left:6px;font-size:14px;">${esc(r.date)}</b>
+              </div>
+              <small style="color:#666;">Grade ${esc(r.grade)} &bull; ${esc(r.subject)} &bull; By ${esc(r.observer)}</small>
+            </div>
+            <div style="font-size:13px;margin-bottom:6px;">
+              <b>Topic:</b> <bdi dir="auto" class="ar" style="font-size:1.1em">${esc(r.topic)}</bdi>
+            </div>
+            ${prev && prev.imp ? `
+              <div class="continuity-alert">
+                <b>🎯 Previous Coaching Target (Obs #${prev.obs}):</b><br>
+                <span>${esc(prev.imp)}</span>
+              </div>
+            ` : ''}
+            ${hlLines.length ? `
+              <div class="timeline-section-title" style="color:#2e7d32;">🌟 Key Highlights</div>
+              <ul style="margin:2px 0 8px;padding-left:18px;font-size:13px;">
+                ${hlLines.map(l => `<li>${esc(l)}</li>`).join("")}
+              </ul>
+            ` : ''}
+            ${impLines.length ? `
+              <div class="timeline-section-title" style="color:#d97706;">🎯 Next Observation Focus</div>
+              <ul style="margin:2px 0 8px;padding-left:18px;font-size:13px;">
+                ${impLines.map(l => `<li>${esc(l)}</li>`).join("")}
+              </ul>
+            ` : ''}
+            <div style="margin-top:8px;">
+              <button class="b alt" onclick="openRec('${r.id}')" style="padding:3px 10px;font-size:12px;min-height:28px;">📄 View Full Observation Sheet</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function drawTeacherRadar(records, teacherName) {
+  const container = d3.select("#teacherRadarChart");
+  container.html("");
+  if (typeof d3 === "undefined") return;
+
+  const radarDimensions = [
+    { name: "LO Alignment", full: "Lesson Alignment & Delivery (Std 1&3)", indices: [0, 1, 4, 7] },
+    { name: "Student Voice", full: "Differentiation & UDL (Std 1&3)", indices: [2, 3, 5, 6, 8, 9, 10] },
+    { name: "Culture & Safety", full: "Classroom Culture & Norms (Std 2)", indices: [11, 12, 13, 14, 15] },
+    { name: "PCK & Literacy", full: "Pedagogical Content Knowledge (Std 4)", indices: [16, 17, 18] },
+    { name: "Assessment", full: "Formative Assessment & Exit Slip (Std 5)", indices: [19] }
+  ];
+
+  const radarData = radarDimensions.map(dim => {
+    let appr = 0, appreh = 0;
+    records.forEach(r => {
+      dim.indices.forEach(idx => {
+        const txt = (r.c && r.c["c" + (idx + 1)]) || "";
+        if (/appreciation/i.test(txt)) appr++;
+        if (/apprehension/i.test(txt)) appreh++;
+      });
+    });
+    const total = appr + appreh;
+    const score = total > 0 ? Math.round((appr / total) * 100) : 60; // 60% baseline if not explicitly tagged
+    return {
+      name: dim.name,
+      full: dim.full,
+      score: score,
+      appr: appr,
+      appreh: appreh,
+      total: total
+    };
+  });
+
+  const width = 360;
+  const height = 310;
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = 95;
+  const numAxes = radarData.length;
+  const angleSlice = (Math.PI * 2) / numAxes;
+
+  const svg = container.append("svg")
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet")
+    .style("width", "100%")
+    .style("max-width", "360px")
+    .style("height", "auto");
+
+  const g = svg.append("g").attr("transform", `translate(${cx},${cy})`);
+
+  // Concentric Grid Levels (20%, 40%, 60%, 80%, 100%)
+  const levels = [0.2, 0.4, 0.6, 0.8, 1.0];
+  levels.forEach(lvl => {
+    const r = radius * lvl;
+    const points = [];
+    for (let i = 0; i < numAxes; i++) {
+      const angle = i * angleSlice - Math.PI / 2;
+      points.push([r * Math.cos(angle), r * Math.sin(angle)]);
+    }
+    g.append("polygon")
+      .attr("points", points.map(p => p.join(",")).join(" "))
+      .attr("stroke", "#c9d6d3")
+      .attr("stroke-width", 0.8)
+      .attr("fill", lvl === 1.0 ? "#f9fcfb" : "none");
+
+    // Percentage labels on the top axis
+    g.append("text")
+      .attr("x", 4)
+      .attr("y", -r + 4)
+      .attr("font-size", "8.5px")
+      .attr("fill", "#8fa29e")
+      .text(`${Math.round(lvl * 100)}%`);
+  });
+
+  // Axis Lines & Labels
+  radarData.forEach((d, i) => {
+    const angle = i * angleSlice - Math.PI / 2;
+    const x = radius * Math.cos(angle);
+    const y = radius * Math.sin(angle);
+
+    g.append("line")
+      .attr("x1", 0)
+      .attr("y1", 0)
+      .attr("x2", x)
+      .attr("y2", y)
+      .attr("stroke", "#b8ccc7")
+      .attr("stroke-width", 1);
+
+    const labelDist = radius + 18;
+    const lx = labelDist * Math.cos(angle);
+    const ly = labelDist * Math.sin(angle);
+    const textAnchor = Math.abs(Math.cos(angle)) < 0.2 ? "middle" : (Math.cos(angle) > 0 ? "start" : "end");
+
+    g.append("text")
+      .attr("x", lx)
+      .attr("y", ly + (Math.sin(angle) > 0.5 ? 6 : (Math.sin(angle) < -0.5 ? -2 : 3)))
+      .attr("text-anchor", textAnchor)
+      .attr("font-size", "11px")
+      .attr("font-weight", "600")
+      .attr("fill", "#0e4a43")
+      .text(d.name);
+  });
+
+  // Data Polygon
+  const polygonPoints = radarData.map((d, i) => {
+    const angle = i * angleSlice - Math.PI / 2;
+    const r = radius * Math.max(0.15, d.score / 100);
+    return [r * Math.cos(angle), r * Math.sin(angle)];
+  });
+
+  g.append("polygon")
+    .attr("points", polygonPoints.map(p => p.join(",")).join(" "))
+    .attr("fill", "rgba(14, 74, 67, 0.28)")
+    .attr("stroke", "#0e4a43")
+    .attr("stroke-width", 2.2);
+
+  // Vertex Markers with Tooltip
+  radarData.forEach((d, i) => {
+    const pt = polygonPoints[i];
+    g.append("circle")
+      .attr("cx", pt[0])
+      .attr("cy", pt[1])
+      .attr("r", 5)
+      .attr("fill", "#0e4a43")
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 1.8)
+      .style("cursor", "pointer")
+      .on("mouseover", (event) => {
+        showTooltip(`<b>${esc(d.full)}</b><br>Competency Score: <b>${d.score}%</b><br><small>${d.appr} Appreciations &bull; ${d.appreh} Coaching Areas</small>`, event);
+      })
+      .on("mousemove", (event) => {
+        showTooltip(`<b>${esc(d.full)}</b><br>Competency Score: <b>${d.score}%</b><br><small>${d.appr} Appreciations &bull; ${d.appreh} Coaching Areas</small>`, event);
+      })
+      .on("mouseout", hideTooltip);
+  });
+}
+
+function exportAnalyticsSummary() {
+  const recs = getFilteredRecords();
+  if (!recs.length) return alert("No observations to summarize.");
+  const totalObs = recs.length;
+  const teachers = [...new Set(recs.map(r => r.teacher))];
+  const summaryText = `*Imani Schools — Teacher Observation & Growth Executive Summary*
+Generated: ${new Date().toLocaleDateString()}
+Total Observations: ${totalObs} across ${teachers.length} teachers
+
+*Key Leadership Metrics:*
+• Commendation Rate: ${$('#kpiCommendRatio') ? $('#kpiCommendRatio').textContent : 'N/A'}
+• Leading Pedagogical Strength: ${$('#kpiTopStrength') ? $('#kpiTopStrength').textContent : 'N/A'} (${$('#kpiStrengthDetail') ? $('#kpiStrengthDetail').textContent : ''})
+• Priority Growth Coaching Focus: ${$('#kpiTopGrowth') ? $('#kpiTopGrowth').textContent : 'N/A'} (${$('#kpiGrowthDetail') ? $('#kpiGrowthDetail').textContent : ''})
+
+*Top Commended Classroom Practices:*
+${[...document.querySelectorAll('#topStrengthsList .leaderboard-item')].map(li => "• " + li.innerText.replace(/\n+/g, " - ")).join("\n") || "None logged"}
+
+*Priority Coaching & Development Focus:*
+${[...document.querySelectorAll('#topGrowthList .leaderboard-item')].map(li => "• " + li.innerText.replace(/\n+/g, " - ")).join("\n") || "None identified"}
+`;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(summaryText).then(() => {
+      showToast("📋 Executive summary copied to clipboard!");
+    }).catch(() => alert(summaryText));
+  } else {
+    alert(summaryText);
+  }
+}
 if("serviceWorker"in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 show("intake");reload();
 updateNetworkUI();

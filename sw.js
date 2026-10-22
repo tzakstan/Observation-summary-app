@@ -1,4 +1,4 @@
-const C = "obs-portal-v4";
+const C = "obs-portal-v5";
 const APP_SHELL = [
   "./",
   "index.html",
@@ -7,7 +7,8 @@ const APP_SHELL = [
   "icon-180.png",
   "icon-192.png",
   "icon-512.png",
-  "KanzalLulu-Regular.ttf"
+  "KanzalLulu-Regular.ttf",
+  "d3.v7.min.js"
 ];
 
 self.addEventListener("install", e => {
